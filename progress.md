@@ -14,6 +14,19 @@ cmake --build build -j
 sudo cmake --install build
 
 cd /home/lijie/code/linux-asr-voicetype
-uv run voicetype serve --host 127.0.0.1 --port 8787 --model Qwen/Qwen3-ASR-0.6B --device cpu
+uv run voicetype serve --host 127.0.0.1 --port 8787 --model Qwen/Qwen3-ASR-0.6B --max-inference-batch-size 1 --device cpu
+
+# 新开一个终端：加载热词（验证热词功能）
+curl -X POST "http://127.0.0.1:8787/v1/hotwords/load" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hotwords": {
+      "custom": {
+        "git": 50,
+        "push": 50
+      }
+    },
+    "merge": false
+  }'
 
 fcitx5 -r -d

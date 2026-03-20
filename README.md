@@ -18,6 +18,41 @@
 
 ## 快速开始
 
+一键安装：
+
+```bash
+cd linux-asr-voicetype
+./install.sh
+```
+
+常用参数示例：
+
+```bash
+./install.sh --device cuda:0 --hf-endpoint https://hf-mirror.com
+```
+
+默认会使用 `https://hf-mirror.com` 作为 HF 镜像地址。  
+如果你要改回官方源：在 UI 中把 HF 镜像输入框清空并保存（或安装时传空值）。
+
+可运行条件（满足即可）：
+
+- `x86_64` Linux
+- 可用 `sudo`
+- 系统具备可用的基础运行/编译环境：`curl`、`git`、`cmake`、C/C++ 编译工具链、`fcitx5` 开发库、`libcurl`、`nlohmann-json`、`alsa-utils`
+- 可访问网络用于安装依赖与首次下载模型（首次完成后可离线使用）
+
+安装脚本说明：
+
+- `install.sh` 默认会自动安装依赖，当前内置了 `apt`/`dnf`/`yum` 三种安装路径（这是脚本实现细节，不是系统能力本质）
+- 如果你的系统是定制发行版，且上述依赖已具备，可使用 `./install.sh --no-deps`
+
+验证通过环境（持续补充）：
+
+- Ubuntu（apt 系）
+- CentOS/兼容发行版（dnf/yum 系）
+
+手动方式：
+
 ```bash
 cd linux-asr-voicetype
 UV_CACHE_DIR=/tmp/uv-cache uv sync
@@ -45,6 +80,23 @@ uv run voicetype serve \
 
 ```bash
 UV_CACHE_DIR=/tmp/uv-cache uv run voicetype health
+```
+
+打开本地控制 UI（先配置，再启动/重载 ASR）：
+
+```text
+http://127.0.0.1:8790/ui
+```
+
+日志文件位置：
+
+- ASR 服务日志：`~/.local/state/voicetype/asr.log`
+- 控制台 UI 日志：`~/.local/state/voicetype/ui.log`
+
+手动仅启动控制 UI：
+
+```bash
+uv run voicetype ui --host 127.0.0.1 --port 8790
 ```
 
 ## 可选：安装真实 Qwen 依赖

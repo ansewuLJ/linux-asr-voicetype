@@ -80,6 +80,8 @@ class QwenEngine:
     def _prepare_hf_env(self) -> None:
         if self._config.hf_endpoint:
             os.environ["HF_ENDPOINT"] = self._config.hf_endpoint
+        else:
+            os.environ.pop("HF_ENDPOINT", None)
         os.environ.setdefault(
             "HF_HUB_ETAG_TIMEOUT", str(self._config.hf_hub_etag_timeout_sec)
         )

@@ -65,3 +65,19 @@ class HealthResponse(BaseModel):
     backend: str
     device: str
     hotwords_count: int
+
+
+class UiConfigUpdateRequest(BaseModel):
+    model: str
+    device: str
+    default_language: str = ""
+    max_inference_batch_size: int = 1
+    hf_endpoint: str | None = None
+
+
+class UiHotwordsFileRequest(BaseModel):
+    path: str
+
+
+class UiHotwordsTextRequest(BaseModel):
+    text: str

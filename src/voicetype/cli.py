@@ -5,9 +5,11 @@ from pathlib import Path
 
 import httpx
 import typer
+import uvicorn
 
 from .audio import encode_pcm16_wav_base64
-from .config import AppConfig
+from .config import AppConfig, default_runtime_config_path, load_runtime_config, save_runtime_config
+from .controller_ui import create_controller_app
 from .server import run_server
 
 app = typer.Typer(help="voicetype command line")
@@ -47,7 +49,7 @@ def serve(
     device: str = "cuda:0",
     backend: str = "transformers",
     hotwords_file: Path | None = None,
-    hf_endpoint: str | None = None,
+    hf_endpoint: str | None = "https://hf-mirror.com",
     hf_probe_timeout_sec: float = 2.5,
     max_inference_batch_size: int = 1,
     allow_mock: bool = False,
@@ -66,6 +68,34 @@ def serve(
         allow_mock,
     )
     run_server(config)
+
+
+@app.command("serve-from-config")
+def serve_from_config(
+    config_file: Path = typer.Option(
+        default_runtime_config_path(),
+        help="Runtime config JSON path",
+    ),
+) -> None:
+    """Start ASR service from persisted runtime config."""
+    config = load_runtime_config(config_file)
+    run_server(config)
+
+
+@app.command("ui")
+def ui(
+    host: str = "127.0.0.1",
+    port: int = 8790,
+    config_file: Path = typer.Option(
+        default_runtime_config_path(),
+        help="Runtime config JSON path",
+    ),
+) -> None:
+    """Start lightweight controller UI (no model loading)."""
+    if not config_file.exists():
+        save_runtime_config(AppConfig(), config_file)
+    app_ui = create_controller_app(config_file=config_file)
+    uvicorn.run(app_ui, host=host, port=port, log_level="info")
 
 
 @app.command()
