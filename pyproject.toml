@@ -1,0 +1,33 @@
+[project]
+name = "qwen-fcitx5-input"
+version = "0.1.0"
+description = "Independent fcitx5 + Python Qwen3-ASR input stack"
+readme = "README.md"
+authors = [{ name = "lijie", email = "lijie@users.noreply.github.com" }]
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn[standard]>=0.35.0",
+  "numpy>=2.1.0",
+  "soundfile>=0.13.1",
+  "pydantic>=2.11.0",
+  "typer>=0.16.0",
+  "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+asr = [
+  "qwen-asr>=0.0.6",
+  "torch>=2.8.0",
+  "transformers>=4.56.0",
+]
+
+[project.scripts]
+qfinput = "qwen_fcitx5_input.cli:main"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["uv_build>=0.9.3,<0.10.0"]
+build-backend = "uv_build"

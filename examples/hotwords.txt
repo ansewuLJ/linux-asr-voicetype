@@ -1,0 +1,5 @@
+# word [weight]
+千问 1.6
+vLLM 1.4
+CUDA 1.4
+fcitx5 1.5
