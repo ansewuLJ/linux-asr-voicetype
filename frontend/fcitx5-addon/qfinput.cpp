@@ -11,6 +11,8 @@
 #include <fcitx/inputpanel.h>
 #include <fcitx/instance.h>
 
+#include <array>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -79,6 +81,8 @@ bool PostJson(const std::string &url, const std::string &payload,
 
 class QfinputAddon : public fcitx::AddonInstance {
 public:
+  enum class VisualState { Idle, RecordingVisual, TranscribingVisual };
+
   explicit QfinputAddon(fcitx::Instance *instance) : instance_(instance) {
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
@@ -95,8 +99,17 @@ public:
           if (activeIc_ == icEvent.inputContext()) {
             activeIc_ = nullptr;
             recording_ = false;
+            visualState_ = VisualState::Idle;
           }
         }));
+
+    constexpr uint64_t kUiTickUsec = 50000;
+    uiTicker_ = instance_->eventLoop().addTimeEvent(
+        CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + kUiTickUsec,
+        kUiTickUsec, [this](fcitx::EventSourceTime *, uint64_t) {
+          onUiTick();
+          return true;
+        });
   }
 
   ~QfinputAddon() override { curl_global_cleanup(); }
@@ -132,22 +145,30 @@ private:
     std::string error;
     if (!PostJson(std::string(kBaseUrl) + "/v1/recording/start", "{}",
                   &response, &error)) {
+      visualState_ = VisualState::Idle;
       updatePreedit(ic, "ASR start failed: " + error);
       return;
     }
 
     recording_ = true;
     activeIc_ = ic;
-    updatePreedit(ic, "... Recording ...");
+    visualState_ = VisualState::RecordingVisual;
+    recordingFrameIndex_ = 0;
+    renderVisualFrame(activeIc_);
   }
 
   void stopAndCommit(fcitx::InputContext *fallbackIc) {
+    auto *ic = activeIc_ ? activeIc_ : fallbackIc;
+    visualState_ = VisualState::TranscribingVisual;
+    transcribingFrameIndex_ = 0;
+    renderVisualFrame(ic);
+
     std::string response;
     std::string error;
     if (!PostJson(std::string(kBaseUrl) + "/v1/recording/stop",
                   R"({"language":"zh"})", &response, &error)) {
-      updatePreedit(activeIc_ ? activeIc_ : fallbackIc,
-                    "ASR stop failed: " + error);
+      visualState_ = VisualState::Idle;
+      updatePreedit(ic, "ASR stop failed: " + error);
       recording_ = false;
       activeIc_ = nullptr;
       return;
@@ -158,41 +179,69 @@ private:
       const auto j = nlohmann::json::parse(response);
       if (!j.value("success", false)) {
         const auto err = j.value("error", std::string("unknown"));
-        updatePreedit(activeIc_ ? activeIc_ : fallbackIc,
-                      "ASR error: " + err);
+        visualState_ = VisualState::Idle;
+        updatePreedit(ic, "ASR error: " + err);
         recording_ = false;
         activeIc_ = nullptr;
         return;
       }
       text = j.value("text", std::string{});
     } catch (...) {
-      updatePreedit(activeIc_ ? activeIc_ : fallbackIc,
-                    "ASR parse response failed");
+      visualState_ = VisualState::Idle;
+      updatePreedit(ic, "ASR parse response failed");
       recording_ = false;
       activeIc_ = nullptr;
       return;
     }
 
-    auto *ic = activeIc_ ? activeIc_ : fallbackIc;
-    if (ic && !text.empty()) {
+    if (ic) {
       clearPreedit(ic);
+    }
+    if (ic && !text.empty()) {
       ic->commitString(text);
     }
 
+    visualState_ = VisualState::Idle;
     recording_ = false;
     activeIc_ = nullptr;
+  }
+
+  void onUiTick() {
+    if (visualState_ == VisualState::Idle) {
+      return;
+    }
+    if (!activeIc_) {
+      return;
+    }
+    renderVisualFrame(activeIc_);
+  }
+
+  void renderVisualFrame(fcitx::InputContext *ic) {
+    if (!ic) {
+      return;
+    }
+
+    if (visualState_ == VisualState::RecordingVisual) {
+      updatePreedit(ic, "说话中...");
+      return;
+    }
+
+    if (visualState_ == VisualState::TranscribingVisual) {
+      updatePreedit(ic, "识别中...");
+    }
   }
 
   void updatePreedit(fcitx::InputContext *ic, const std::string &text) {
     if (!ic) {
       return;
     }
+    // Keep hints inline in the client text field and avoid extra popup panel.
+    fcitx::Text empty;
+    ic->inputPanel().setPreedit(empty);
     fcitx::Text preedit;
     preedit.append(text);
-    ic->inputPanel().setPreedit(preedit);
     ic->inputPanel().setClientPreedit(preedit);
     ic->updatePreedit();
-    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
   }
 
   void clearPreedit(fcitx::InputContext *ic) {
@@ -203,13 +252,16 @@ private:
     ic->inputPanel().setPreedit(empty);
     ic->inputPanel().setClientPreedit(empty);
     ic->updatePreedit();
-    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
   }
 
   fcitx::Instance *instance_;
   bool recording_ = false;
   bool triggerHeld_ = false;
   fcitx::InputContext *activeIc_ = nullptr;
+  VisualState visualState_ = VisualState::Idle;
+  size_t recordingFrameIndex_ = 0;
+  size_t transcribingFrameIndex_ = 0;
+  std::unique_ptr<fcitx::EventSourceTime> uiTicker_;
   std::vector<std::unique_ptr<fcitx::HandlerTableEntry<fcitx::EventHandler>>>
       eventHandlers_;
 };
