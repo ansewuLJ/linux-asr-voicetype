@@ -3,9 +3,12 @@ Name=VoiceType
 Name[zh_CN]=VoiceType 语音输入
 Comment=VoiceType ASR bridge addon for Fcitx5
 Comment[zh_CN]=基于 VoiceType ASR 服务的 Fcitx5 语音输入桥接模块
-Category=InputMethod
+Category=Module
 Library=voicetype-fcitx5
 Type=SharedLibrary
 OnDemand=False
 Configurable=False
 Version=@PROJECT_VERSION@
+
+[Addon/Dependencies]
+0=dbus
