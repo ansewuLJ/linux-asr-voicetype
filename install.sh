@@ -113,7 +113,7 @@ install_deps_ubuntu() {
   sudo apt-get update
   sudo apt-get install -y \
     curl ca-certificates git build-essential cmake pkg-config \
-    libcurl4-openssl-dev nlohmann-json3-dev alsa-utils
+    libcurl4-openssl-dev nlohmann-json3-dev alsa-utils xdotool
 
   if [[ "$INSTALL_ADDON" == "1" ]]; then
     if sudo apt-get install -y fcitx5-dev; then
@@ -131,7 +131,7 @@ install_deps_dnf() {
   sudo dnf -y install epel-release || true
   sudo dnf -y install \
     curl ca-certificates git gcc gcc-c++ make cmake pkgconfig \
-    libcurl-devel nlohmann-json-devel alsa-utils
+    libcurl-devel nlohmann-json-devel alsa-utils xdotool
 
   if [[ "$INSTALL_ADDON" == "1" ]]; then
     if ! sudo dnf -y install fcitx5-devel; then
@@ -145,7 +145,7 @@ install_deps_yum() {
   sudo yum -y install epel-release || true
   sudo yum -y install \
     curl ca-certificates git gcc gcc-c++ make cmake pkgconfig \
-    libcurl-devel nlohmann-json-devel alsa-utils
+    libcurl-devel nlohmann-json-devel alsa-utils xdotool
 
   if [[ "$INSTALL_ADDON" == "1" ]]; then
     if ! sudo yum -y install fcitx5-devel; then
@@ -180,6 +180,7 @@ run_uv_sync() {
   else
     "$UV_BIN" sync --extra asr
   fi
+  "$UV_BIN" pip install --python "$REPO_DIR/.venv/bin/python" "pynput>=1.7.7"
 }
 
 install_addon() {
@@ -222,7 +223,9 @@ install_user_service() {
   "hf_probe_timeout_sec": 2.5,
   "hf_hub_etag_timeout_sec": 3,
   "hf_hub_download_timeout_sec": 30,
-  "max_inference_batch_size": ${MAX_INFERENCE_BATCH_SIZE}
+  "max_inference_batch_size": ${MAX_INFERENCE_BATCH_SIZE},
+  "global_hotkey_enabled": false,
+  "global_hotkey_key": "right_alt"
 }
 EOF
 
@@ -264,6 +267,10 @@ install_ui_service() {
     echo "Type=simple"
     echo "WorkingDirectory=${REPO_DIR}"
     echo "Environment=UV_CACHE_DIR=/tmp/uv-cache"
+    echo "Environment=DISPLAY=:0"
+    echo "Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus"
+    echo "Environment=XDG_RUNTIME_DIR=%t"
+    echo "Environment=PULSE_SERVER=unix:%t/pulse/native"
     echo "ExecStart=${UV_BIN} run voicetype ui --host 127.0.0.1 --port 8790"
     echo "Restart=always"
     echo "RestartSec=2"

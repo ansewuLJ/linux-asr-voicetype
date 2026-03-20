@@ -21,6 +21,8 @@ class AppConfig(BaseModel):
     hf_hub_etag_timeout_sec: int = 3
     hf_hub_download_timeout_sec: int = 30
     max_inference_batch_size: int = 1
+    global_hotkey_enabled: bool = False
+    global_hotkey_key: str = "right_alt"
 
 
 class RuntimeState(BaseModel):
