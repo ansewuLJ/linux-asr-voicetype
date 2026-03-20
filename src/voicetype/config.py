@@ -19,6 +19,7 @@ class AppConfig(BaseModel):
     hf_probe_timeout_sec: float = 2.5
     hf_hub_etag_timeout_sec: int = 3
     hf_hub_download_timeout_sec: int = 30
+    max_inference_batch_size: int = 1
 
 
 class RuntimeState(BaseModel):

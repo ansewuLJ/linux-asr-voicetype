@@ -22,6 +22,7 @@ def _config_from_options(
     hotwords_file: Path | None,
     hf_endpoint: str | None,
     hf_probe_timeout_sec: float,
+    max_inference_batch_size: int,
     use_mock_when_unavailable: bool,
 ) -> AppConfig:
     return AppConfig(
@@ -33,6 +34,7 @@ def _config_from_options(
         hotwords_file=hotwords_file,
         hf_endpoint=hf_endpoint,
         hf_probe_timeout_sec=hf_probe_timeout_sec,
+        max_inference_batch_size=max_inference_batch_size,
         use_mock_when_unavailable=use_mock_when_unavailable,
     )
 
@@ -47,6 +49,7 @@ def serve(
     hotwords_file: Path | None = None,
     hf_endpoint: str | None = None,
     hf_probe_timeout_sec: float = 2.5,
+    max_inference_batch_size: int = 1,
     allow_mock: bool = False,
 ) -> None:
     """Start local ASR service."""
@@ -59,6 +62,7 @@ def serve(
         hotwords_file,
         hf_endpoint,
         hf_probe_timeout_sec,
+        max_inference_batch_size,
         allow_mock,
     )
     run_server(config)

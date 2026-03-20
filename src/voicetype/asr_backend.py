@@ -65,6 +65,7 @@ class QwenEngine:
             self._model = Qwen3ASRModel.from_pretrained(
                 self._config.model,
                 device_map=self._config.device,
+                max_inference_batch_size=self._config.max_inference_batch_size,
             )
             self._backend = self._config.backend
             LOGGER.info("Loaded model: %s", self._config.model)
