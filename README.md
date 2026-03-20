@@ -1,4 +1,4 @@
-# qwen-fcitx5-input
+# linux-asr-voicetype
 
 独立语音输入项目：`fcitx5` 负责输入法前端，核心识别逻辑由 Python 服务承载，仅聚焦 `Qwen3-ASR-0.6B/1.7B`。
 
@@ -12,21 +12,21 @@
 
 ## 目录
 
-- `src/qwen_fcitx5_input/` Python 核心服务
+- `src/voicetype/` Python 核心服务
 - `systemd/` 用户服务文件
 - `examples/` 示例配置
 
 ## 快速开始
 
 ```bash
-cd qwen-fcitx5-input
+cd linux-asr-voicetype
 UV_CACHE_DIR=/tmp/uv-cache uv sync
 ```
 
 启动服务：
 
 ```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run qfinput serve \
+UV_CACHE_DIR=/tmp/uv-cache uv run voicetype serve \
   --host 127.0.0.1 \
   --port 8787 \
   --model Qwen/Qwen3-ASR-0.6B
@@ -35,7 +35,7 @@ UV_CACHE_DIR=/tmp/uv-cache uv run qfinput serve \
 国内网络建议直接带镜像：
 
 ```bash
-uv run qfinput serve \
+uv run voicetype serve \
   --model Qwen/Qwen3-ASR-0.6B \
   --hf-endpoint https://hf-mirror.com \
   --hf-probe-timeout-sec 2
@@ -44,7 +44,7 @@ uv run qfinput serve \
 检查健康状态：
 
 ```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run qfinput health
+UV_CACHE_DIR=/tmp/uv-cache uv run voicetype health
 ```
 
 ## 可选：安装真实 Qwen 依赖
@@ -80,13 +80,13 @@ UV_CACHE_DIR=/tmp/uv-cache uv sync --extra asr
 构建与安装：
 
 ```bash
-cd /home/lijie/code/qwen-fcitx5-input/frontend/fcitx5-addon
+cd /home/lijie/code/linux-asr-voicetype/frontend/fcitx5-addon
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 sudo cmake --install build
 ```
 
-重启 `fcitx5` 后，在 addon 列表里启用 `Qfinput` 模块即可。
+重启 `fcitx5` 后，在 addon 列表里启用 `VoiceType` 模块即可。
 
 ## 下一步
 

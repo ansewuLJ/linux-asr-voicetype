@@ -79,11 +79,11 @@ bool PostJson(const std::string &url, const std::string &payload,
 
 } // namespace
 
-class QfinputAddon : public fcitx::AddonInstance {
+class VoiceTypeAddon : public fcitx::AddonInstance {
 public:
   enum class VisualState { Idle, RecordingVisual, TranscribingVisual };
 
-  explicit QfinputAddon(fcitx::Instance *instance) : instance_(instance) {
+  explicit VoiceTypeAddon(fcitx::Instance *instance) : instance_(instance) {
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
     eventHandlers_.emplace_back(instance_->watchEvent(
@@ -112,7 +112,7 @@ public:
         });
   }
 
-  ~QfinputAddon() override { curl_global_cleanup(); }
+  ~VoiceTypeAddon() override { curl_global_cleanup(); }
 
 private:
   void handleKeyEvent(fcitx::Event &event) {
@@ -266,14 +266,14 @@ private:
       eventHandlers_;
 };
 
-class QfinputAddonFactory : public fcitx::AddonFactory {
+class VoiceTypeAddonFactory : public fcitx::AddonFactory {
   fcitx::AddonInstance *create(fcitx::AddonManager *manager) override {
-    return new QfinputAddon(manager->instance());
+    return new VoiceTypeAddon(manager->instance());
   }
 };
 
-#ifdef QFINPUT_HAVE_ADDON_FACTORY_V2
-FCITX_ADDON_FACTORY_V2(qfinput, QfinputAddonFactory);
+#ifdef VOICETYPE_HAVE_ADDON_FACTORY_V2
+FCITX_ADDON_FACTORY_V2(voicetype, VoiceTypeAddonFactory);
 #else
-FCITX_ADDON_FACTORY(QfinputAddonFactory);
+FCITX_ADDON_FACTORY(VoiceTypeAddonFactory);
 #endif

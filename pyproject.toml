@@ -1,5 +1,5 @@
 [project]
-name = "qwen-fcitx5-input"
+name = "voicetype"
 version = "0.1.0"
 description = "Independent fcitx5 + Python Qwen3-ASR input stack"
 readme = "README.md"
@@ -23,7 +23,7 @@ asr = [
 ]
 
 [project.scripts]
-qfinput = "qwen_fcitx5_input.cli:main"
+voicetype = "voicetype.cli:main"
 
 [tool.uv]
 package = true

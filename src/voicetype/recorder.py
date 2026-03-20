@@ -36,7 +36,7 @@ class ArecordManager:
         if not arecord:
             raise RuntimeError("arecord not found; install alsa-utils")
 
-        fd, wav_path_str = tempfile.mkstemp(prefix="qfinput_", suffix=".wav")
+        fd, wav_path_str = tempfile.mkstemp(prefix="voicetype_", suffix=".wav")
         os.close(fd)
         Path(wav_path_str).unlink(missing_ok=True)
 

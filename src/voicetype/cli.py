@@ -10,7 +10,7 @@ from .audio import encode_pcm16_wav_base64
 from .config import AppConfig
 from .server import run_server
 
-app = typer.Typer(help="qwen-fcitx5-input command line")
+app = typer.Typer(help="voicetype command line")
 
 
 def _config_from_options(

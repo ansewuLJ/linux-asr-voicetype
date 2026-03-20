@@ -31,7 +31,7 @@ from .session_manager import SessionManager
 def create_app(config: AppConfig) -> FastAPI:
     logging.basicConfig(level=getattr(logging, config.log_level.upper(), logging.INFO))
 
-    app = FastAPI(title="qwen-fcitx5-input", version="0.1.0")
+    app = FastAPI(title="VoiceType", version="0.1.0")
     engine = QwenEngine(config)
     sessions = SessionManager(max_seconds=config.max_session_seconds)
     recorder = ArecordManager()
