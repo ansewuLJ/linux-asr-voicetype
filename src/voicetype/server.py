@@ -6,7 +6,6 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
 
 from .asr_backend import QwenEngine
 from .audio import decode_base64_wav, load_wav_file
@@ -31,7 +30,6 @@ from .schema import (
     UiHotwordsTextRequest,
 )
 from .session_manager import SessionManager
-from .ui_page import render_ui
 
 
 def _setup_asr_file_logging(level_name: str) -> None:
@@ -83,10 +81,6 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.on_event("startup")
     def startup() -> None:
         engine.load()
-
-    @app.get("/ui", response_class=HTMLResponse)
-    def ui_page() -> HTMLResponse:
-        return HTMLResponse(render_ui())
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
