@@ -29,6 +29,7 @@ constexpr const char *kVoiceTypeConfigPath = "conf/voicetype.conf";
 
 struct VoiceTypeSettings {
   fcitx::KeyList triggerKeys{fcitx::Key(FcitxKey_Alt_R)};
+  fcitx::KeyList toggleKeys{fcitx::Key("Alt+z")};
   std::string host = kDefaultHost;
   int port = kDefaultPort;
 };
@@ -47,6 +48,10 @@ public:
                     TriggerKeyListConstrain(), {},
                     fcitx::ToolTipAnnotation(
                         "Press and hold this key to record. Release to transcribe.")),
+        toggleKeys(this, "ToggleKey", "Toggle Recording Key", settings.toggleKeys,
+                   TriggerKeyListConstrain(), {},
+                   fcitx::ToolTipAnnotation(
+                       "Press once to start recording, press again to stop and transcribe. Default: Alt+Z.")),
         host(this, "Host", "ASR Host", settings.host, {},
              {}, fcitx::ToolTipAnnotation("ASR service host. 需要与UI配置完全相同。")),
         port(this, "Port", "ASR Port", settings.port, fcitx::IntConstrain(1, 65535),
@@ -57,6 +62,7 @@ public:
   VoiceTypeSettings settings() const {
     VoiceTypeSettings s;
     s.triggerKeys = triggerKeys.value();
+    s.toggleKeys = toggleKeys.value();
     s.host = host.value();
     s.port = port.value();
     return s;
@@ -65,6 +71,10 @@ public:
   fcitx::Option<fcitx::KeyList, fcitx::ListConstrain<fcitx::KeyConstrain>,
                 fcitx::DefaultMarshaller<fcitx::KeyList>, fcitx::ToolTipAnnotation>
       triggerKeys;
+
+  fcitx::Option<fcitx::KeyList, fcitx::ListConstrain<fcitx::KeyConstrain>,
+                fcitx::DefaultMarshaller<fcitx::KeyList>, fcitx::ToolTipAnnotation>
+      toggleKeys;
 
   fcitx::Option<std::string, fcitx::NoConstrain<std::string>,
                 fcitx::DefaultMarshaller<std::string>, fcitx::ToolTipAnnotation>
@@ -143,11 +153,11 @@ bool SaveVoiceTypeSettings(const VoiceTypeSettings &settings) {
                               kVoiceTypeConfigPath);
 }
 
-fcitx::Key ResolveTriggerKey(const fcitx::KeyList &keys) {
+fcitx::Key ResolvePrimaryKey(const fcitx::KeyList &keys, const fcitx::Key &fallback) {
   if (!keys.empty()) {
     return keys.front().normalize();
   }
-  return fcitx::Key(FcitxKey_Alt_R);
+  return fallback;
 }
 
 std::string BuildAsrUrl(const std::string &baseUrl, const char *path) {
@@ -213,8 +223,31 @@ public:
   }
 
 private:
+  bool isTriggerPressedEvent(const fcitx::Key &key) const {
+    if (!triggerKey_.isModifier()) {
+      return key.check(triggerKey_);
+    }
+    return key.sym() == triggerKey_.sym();
+  }
+
+  bool isTriggerReleasedEvent(const fcitx::Key &key) const {
+    if (!triggerKey_.isModifier()) {
+      return key.check(triggerKey_);
+    }
+    return key.isReleaseOfModifier(triggerKey_);
+  }
+
+  bool isToggleEvent(const fcitx::Key &key) const {
+    if (toggleKey_.isModifier()) {
+      return key.sym() == toggleKey_.sym();
+    }
+    return key.sym() == toggleKey_.sym() &&
+           (key.states() & toggleKey_.states()) == toggleKey_.states();
+  }
+
   void applySettings() {
-    triggerKey_ = ResolveTriggerKey(settings_.triggerKeys);
+    triggerKey_ = ResolvePrimaryKey(settings_.triggerKeys, fcitx::Key(FcitxKey_Alt_R));
+    toggleKey_ = ResolvePrimaryKey(settings_.toggleKeys, fcitx::Key("Alt+z"));
     const auto &host = settings_.host.empty() ? std::string(kDefaultHost) : settings_.host;
     asrBaseUrl_ = std::string("http://") + host + ":" + std::to_string(settings_.port);
   }
@@ -222,18 +255,54 @@ private:
   void handleKeyEvent(fcitx::Event &event) {
     auto &keyEvent = static_cast<fcitx::KeyEvent &>(event);
 
-    if (!keyEvent.key().check(triggerKey_)) {
+    // For modifier-only trigger keys (Alt/Ctrl), if user presses another key
+    // while trigger is held, treat it as a shortcut chord and discard this
+    // recording so we don't accidentally transcribe Alt+X/Ctrl+X patterns.
+    if (triggerHeld_ && recording_ && triggerKey_.isModifier() &&
+        !keyEvent.isRelease() && !isTriggerPressedEvent(keyEvent.key()) &&
+        !isToggleEvent(keyEvent.key())) {
+      stopAndDiscard(keyEvent.inputContext());
+      triggerHeld_ = false;
+      return;
+    }
+
+    if (isToggleEvent(keyEvent.key())) {
+      if (keyEvent.isRelease()) {
+        togglePressed_ = false;
+        keyEvent.filterAndAccept();
+        return;
+      }
+      if (togglePressed_) {
+        keyEvent.filterAndAccept();
+        return;
+      }
+      togglePressed_ = true;
+      if (!recording_) {
+        recordingByToggle_ = true;
+        startRecording(keyEvent.inputContext());
+      } else {
+        stopAndCommit(keyEvent.inputContext());
+      }
+      keyEvent.filterAndAccept();
       return;
     }
 
     if (!keyEvent.isRelease()) {
+      if (!isTriggerPressedEvent(keyEvent.key())) {
+        return;
+      }
       if (!triggerHeld_) {
         triggerHeld_ = true;
         if (!recording_) {
+          recordingByToggle_ = false;
           startRecording(keyEvent.inputContext());
         }
       }
       keyEvent.filterAndAccept();
+      return;
+    }
+
+    if (!isTriggerReleasedEvent(keyEvent.key())) {
       return;
     }
 
@@ -307,6 +376,26 @@ private:
 
     visualState_ = VisualState::Idle;
     recording_ = false;
+    recordingByToggle_ = false;
+    activeIc_ = nullptr;
+  }
+
+  void stopAndDiscard(fcitx::InputContext *fallbackIc) {
+    auto *ic = activeIc_ ? activeIc_ : fallbackIc;
+    visualState_ = VisualState::TranscribingVisual;
+    renderVisualFrame(ic);
+
+    std::string response;
+    std::string error;
+    (void)PostJson(BuildAsrUrl(asrBaseUrl_, "/v1/recording/stop"),
+                   R"({"language":"zh"})", &response, &error);
+
+    if (ic) {
+      clearPreedit(ic);
+    }
+    visualState_ = VisualState::Idle;
+    recording_ = false;
+    recordingByToggle_ = false;
     activeIc_ = nullptr;
   }
 
@@ -326,7 +415,7 @@ private:
     }
 
     if (visualState_ == VisualState::RecordingVisual) {
-      updatePreedit(ic, "说话中...");
+      updatePreedit(ic, recordingByToggle_ ? "录音中...再按一次结束" : "录音中...");
       return;
     }
 
@@ -361,9 +450,12 @@ private:
   fcitx::Instance *instance_;
   VoiceTypeSettings settings_;
   fcitx::Key triggerKey_ = fcitx::Key(FcitxKey_Alt_R);
+  fcitx::Key toggleKey_ = fcitx::Key("Alt+z");
+  bool togglePressed_ = false;
   mutable std::unique_ptr<VoiceTypeConfig> uiConfig_;
   std::string asrBaseUrl_ = "http://127.0.0.1:8787";
   bool recording_ = false;
+  bool recordingByToggle_ = false;
   bool triggerHeld_ = false;
   fcitx::InputContext *activeIc_ = nullptr;
   VisualState visualState_ = VisualState::Idle;
