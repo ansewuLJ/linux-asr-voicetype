@@ -9,6 +9,7 @@ HOST="127.0.0.1"
 PORT="8787"
 MODEL="Qwen/Qwen3-ASR-0.6B"
 DEVICE="cpu"
+DTYPE="bfloat16"
 MAX_INFERENCE_BATCH_SIZE="1"
 HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
 INSTALL_ADDON="1"
@@ -37,6 +38,7 @@ Options:
   --port <port>                            API bind port (default: 8787)
   --model <model>                          Model repo/path (default: Qwen/Qwen3-ASR-0.6B)
   --device <device>                        Device map, e.g. cpu/cuda:0 (default: cpu)
+  --dtype <dtype>                          Torch dtype (default: bfloat16; empty to disable)
   --max-inference-batch-size <n>           Inference batch upper bound (default: 1)
   --hf-endpoint <url>                      HF mirror endpoint (default: https://hf-mirror.com; pass empty to disable)
   --uv-index-url <url>                     Optional UV index mirror
@@ -58,6 +60,8 @@ while [[ $# -gt 0 ]]; do
     MODEL="${2:-}"; shift 2 ;;
   --device)
     DEVICE="${2:-}"; shift 2 ;;
+  --dtype)
+    DTYPE="${2:-}"; shift 2 ;;
   --max-inference-batch-size)
     MAX_INFERENCE_BATCH_SIZE="${2:-}"; shift 2 ;;
   --hf-endpoint)
@@ -202,10 +206,14 @@ install_user_service() {
   local unit_file="$user_service_dir/voicetype.service"
   local runtime_config_file="$HOME/.config/voicetype/runtime.json"
   local hf_endpoint_json="null"
+  local dtype_json="null"
   mkdir -p "$user_service_dir"
   mkdir -p "$(dirname "$runtime_config_file")"
   if [[ -n "$HF_ENDPOINT" ]]; then
     hf_endpoint_json="\"$HF_ENDPOINT\""
+  fi
+  if [[ -n "$DTYPE" ]]; then
+    dtype_json="\"$DTYPE\""
   fi
   cat >"$runtime_config_file" <<EOF
 {
@@ -214,6 +222,7 @@ install_user_service() {
   "model": "${MODEL}",
   "device": "${DEVICE}",
   "backend": "transformers",
+  "dtype": ${dtype_json},
   "default_language": "",
   "max_session_seconds": 120,
   "hotwords_file": null,

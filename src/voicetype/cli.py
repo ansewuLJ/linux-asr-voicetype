@@ -10,9 +10,12 @@ import uvicorn
 from .audio import encode_pcm16_wav_base64
 from .config import AppConfig, default_runtime_config_path, load_runtime_config, save_runtime_config
 from .controller_ui import create_controller_app
+from .model_downloader import download_hf_repo_snapshot
 from .server import run_server
 
 app = typer.Typer(help="voicetype command line")
+model_app = typer.Typer(help="Model management commands")
+app.add_typer(model_app, name="model")
 
 
 def _config_from_options(
@@ -21,6 +24,7 @@ def _config_from_options(
     model: str,
     device: str,
     backend: str,
+    dtype: str | None,
     hotwords_file: Path | None,
     hf_endpoint: str | None,
     hf_probe_timeout_sec: float,
@@ -33,6 +37,7 @@ def _config_from_options(
         model=model,
         device=device,
         backend=backend,
+        dtype=dtype,
         hotwords_file=hotwords_file,
         hf_endpoint=hf_endpoint,
         hf_probe_timeout_sec=hf_probe_timeout_sec,
@@ -48,6 +53,7 @@ def serve(
     model: str = "Qwen/Qwen3-ASR-0.6B",
     device: str = "cuda:0",
     backend: str = "transformers",
+    dtype: str | None = "bfloat16",
     hotwords_file: Path | None = None,
     hf_endpoint: str | None = "https://hf-mirror.com",
     hf_probe_timeout_sec: float = 2.5,
@@ -61,6 +67,7 @@ def serve(
         model,
         device,
         backend,
+        dtype,
         hotwords_file,
         hf_endpoint,
         hf_probe_timeout_sec,
@@ -119,6 +126,63 @@ def mock_audio(
     t = np.linspace(0, seconds, int(sample_rate * seconds), endpoint=False)
     signal = 0.1 * np.sin(2.0 * np.pi * freq * t)
     typer.echo(encode_pcm16_wav_base64(signal.astype(np.float32), sample_rate=sample_rate))
+
+
+@model_app.command("download")
+def model_download(
+    repo_id: str = typer.Argument(..., help="HF repo id, e.g. Qwen/Qwen3-ASR-0.6B"),
+    local_dir: Path = typer.Option(..., "--local-dir", help="Target local directory"),
+    revision: str | None = typer.Option(
+        None,
+        "--revision",
+        help="Branch/tag/commit. Default is repo default branch.",
+    ),
+    hf_endpoint: str | None = typer.Option(
+        "https://hf-mirror.com",
+        "--hf-endpoint",
+        help="HF endpoint or mirror. Pass empty string to use official endpoint.",
+    ),
+    token: str | None = typer.Option(
+        None,
+        "--token",
+        help="HF access token (optional for public repos).",
+    ),
+    force_download: bool = typer.Option(
+        False,
+        "--force",
+        help="Force redownload even if local cache exists.",
+    ),
+    max_workers: int = typer.Option(
+        8,
+        "--max-workers",
+        min=1,
+        help="Parallel workers used by downloader.",
+    ),
+    cache_dir: Path | None = typer.Option(
+        None,
+        "--cache-dir",
+        help="Optional Hugging Face cache directory.",
+    ),
+    keep_hf_metadata: bool = typer.Option(
+        False,
+        "--keep-hf-metadata",
+        help="Keep local .cache/huggingface metadata folder inside --local-dir.",
+    ),
+) -> None:
+    """Download full model repo as real files (no symlinks)."""
+    endpoint = (hf_endpoint or "").strip() or None
+    out_dir = download_hf_repo_snapshot(
+        repo_id=repo_id,
+        local_dir=local_dir.expanduser().resolve(),
+        endpoint=endpoint,
+        revision=revision,
+        token=token,
+        force_download=force_download,
+        max_workers=max_workers,
+        cache_dir=cache_dir.expanduser().resolve() if cache_dir else None,
+        strip_hf_metadata_dir=not keep_hf_metadata,
+    )
+    typer.echo(f"Download completed: {out_dir}")
 
 
 def main() -> None:

@@ -11,6 +11,7 @@ class AppConfig(BaseModel):
     model: str = "Qwen/Qwen3-ASR-0.6B"
     device: str = "cuda:0"
     backend: str = "transformers"
+    dtype: str | None = "bfloat16"
     default_language: str = ""
     max_session_seconds: int = 120
     hotwords_file: Path | None = None

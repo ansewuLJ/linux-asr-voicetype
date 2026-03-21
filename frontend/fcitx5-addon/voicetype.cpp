@@ -3,23 +3,77 @@
 
 #include <fcitx-utils/event.h>
 #include <fcitx-utils/key.h>
+#include <fcitx-utils/standardpath.h>
 #include <fcitx/addonfactory.h>
 #include <fcitx/addoninstance.h>
 #include <fcitx/addonmanager.h>
+#include <fcitx-config/configuration.h>
+#include <fcitx-config/iniparser.h>
+#include <fcitx-config/option.h>
+#include <fcitx-config/rawconfig.h>
 #include <fcitx/event.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputpanel.h>
 #include <fcitx/instance.h>
 
 #include <array>
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace {
 
-constexpr const char *kBaseUrl = "http://127.0.0.1:8787";
+constexpr const char *kDefaultHost = "127.0.0.1";
+constexpr int kDefaultPort = 8787;
+constexpr const char *kVoiceTypeConfigPath = "conf/voicetype.conf";
+
+struct VoiceTypeSettings {
+  fcitx::KeyList triggerKeys{fcitx::Key(FcitxKey_Alt_R)};
+  std::string host = kDefaultHost;
+  int port = kDefaultPort;
+};
+
+fcitx::ListConstrain<fcitx::KeyConstrain> TriggerKeyListConstrain() {
+  return fcitx::KeyListConstrain(fcitx::KeyConstrainFlags{
+      fcitx::KeyConstrainFlag::AllowModifierOnly,
+      fcitx::KeyConstrainFlag::AllowModifierLess,
+  });
+}
+
+class VoiceTypeConfig : public fcitx::Configuration {
+public:
+  explicit VoiceTypeConfig(const VoiceTypeSettings &settings)
+      : triggerKeys(this, "TriggerKey", "Trigger Key", settings.triggerKeys,
+                    TriggerKeyListConstrain(), {},
+                    fcitx::ToolTipAnnotation(
+                        "Press and hold this key to record. Release to transcribe.")),
+        host(this, "Host", "ASR Host", settings.host, {},
+             {}, fcitx::ToolTipAnnotation("ASR service host. 需要与UI配置完全相同。")),
+        port(this, "Port", "ASR Port", settings.port, fcitx::IntConstrain(1, 65535),
+             {}, fcitx::ToolTipAnnotation("ASR service port. 需要与UI配置完全相同。")) {}
+
+  const char *typeName() const override { return "VoiceTypeConfig"; }
+
+  VoiceTypeSettings settings() const {
+    VoiceTypeSettings s;
+    s.triggerKeys = triggerKeys.value();
+    s.host = host.value();
+    s.port = port.value();
+    return s;
+  }
+
+  fcitx::Option<fcitx::KeyList, fcitx::ListConstrain<fcitx::KeyConstrain>,
+                fcitx::DefaultMarshaller<fcitx::KeyList>, fcitx::ToolTipAnnotation>
+      triggerKeys;
+
+  fcitx::Option<std::string, fcitx::NoConstrain<std::string>,
+                fcitx::DefaultMarshaller<std::string>, fcitx::ToolTipAnnotation>
+      host;
+
+  fcitx::Option<int, fcitx::IntConstrain, fcitx::DefaultMarshaller<int>,
+                fcitx::ToolTipAnnotation>
+      port;
+};
 
 size_t CurlWriteCallback(void *contents, size_t size, size_t nmemb,
                          std::string *output) {
@@ -77,6 +131,29 @@ bool PostJson(const std::string &url, const std::string &payload,
   return true;
 }
 
+VoiceTypeSettings LoadVoiceTypeSettings() {
+  VoiceTypeConfig config(VoiceTypeSettings{});
+  fcitx::readAsIni(config, fcitx::StandardPath::Type::PkgConfig, kVoiceTypeConfigPath);
+  return config.settings();
+}
+
+bool SaveVoiceTypeSettings(const VoiceTypeSettings &settings) {
+  VoiceTypeConfig config(settings);
+  return fcitx::safeSaveAsIni(config, fcitx::StandardPath::Type::PkgConfig,
+                              kVoiceTypeConfigPath);
+}
+
+fcitx::Key ResolveTriggerKey(const fcitx::KeyList &keys) {
+  if (!keys.empty()) {
+    return keys.front().normalize();
+  }
+  return fcitx::Key(FcitxKey_Alt_R);
+}
+
+std::string BuildAsrUrl(const std::string &baseUrl, const char *path) {
+  return baseUrl + path;
+}
+
 } // namespace
 
 class VoiceTypeAddon : public fcitx::AddonInstance {
@@ -85,6 +162,7 @@ public:
 
   explicit VoiceTypeAddon(fcitx::Instance *instance) : instance_(instance) {
     curl_global_init(CURL_GLOBAL_DEFAULT);
+    reloadConfig();
 
     eventHandlers_.emplace_back(instance_->watchEvent(
         fcitx::EventType::InputContextKeyEvent,
@@ -114,11 +192,37 @@ public:
 
   ~VoiceTypeAddon() override { curl_global_cleanup(); }
 
+  void reloadConfig() override {
+    settings_ = LoadVoiceTypeSettings();
+    applySettings();
+  }
+
+  void save() override { SaveVoiceTypeSettings(settings_); }
+
+  const fcitx::Configuration *getConfig() const override {
+    uiConfig_ = std::make_unique<VoiceTypeConfig>(settings_);
+    return uiConfig_.get();
+  }
+
+  void setConfig(const fcitx::RawConfig &rawConfig) override {
+    auto config = std::make_unique<VoiceTypeConfig>(settings_);
+    config->load(rawConfig, true);
+    settings_ = config->settings();
+    applySettings();
+    SaveVoiceTypeSettings(settings_);
+  }
+
 private:
+  void applySettings() {
+    triggerKey_ = ResolveTriggerKey(settings_.triggerKeys);
+    const auto &host = settings_.host.empty() ? std::string(kDefaultHost) : settings_.host;
+    asrBaseUrl_ = std::string("http://") + host + ":" + std::to_string(settings_.port);
+  }
+
   void handleKeyEvent(fcitx::Event &event) {
     auto &keyEvent = static_cast<fcitx::KeyEvent &>(event);
 
-    if (!keyEvent.key().check(FcitxKey_Alt_R)) {
+    if (!keyEvent.key().check(triggerKey_)) {
       return;
     }
 
@@ -143,7 +247,7 @@ private:
   void startRecording(fcitx::InputContext *ic) {
     std::string response;
     std::string error;
-    if (!PostJson(std::string(kBaseUrl) + "/v1/recording/start", "{}",
+    if (!PostJson(BuildAsrUrl(asrBaseUrl_, "/v1/recording/start"), "{}",
                   &response, &error)) {
       visualState_ = VisualState::Idle;
       updatePreedit(ic, "ASR start failed: " + error);
@@ -165,7 +269,7 @@ private:
 
     std::string response;
     std::string error;
-    if (!PostJson(std::string(kBaseUrl) + "/v1/recording/stop",
+    if (!PostJson(BuildAsrUrl(asrBaseUrl_, "/v1/recording/stop"),
                   R"({"language":"zh"})", &response, &error)) {
       visualState_ = VisualState::Idle;
       updatePreedit(ic, "ASR stop failed: " + error);
@@ -255,6 +359,10 @@ private:
   }
 
   fcitx::Instance *instance_;
+  VoiceTypeSettings settings_;
+  fcitx::Key triggerKey_ = fcitx::Key(FcitxKey_Alt_R);
+  mutable std::unique_ptr<VoiceTypeConfig> uiConfig_;
+  std::string asrBaseUrl_ = "http://127.0.0.1:8787";
   bool recording_ = false;
   bool triggerHeld_ = false;
   fcitx::InputContext *activeIc_ = nullptr;

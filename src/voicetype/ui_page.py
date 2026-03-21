@@ -39,11 +39,8 @@ def render_ui() -> str:
     <div class="grid">
       <section class="card">
         <h2>运行配置</h2>
-        <label>模型</label>
-        <select id="model">
-          <option value="Qwen/Qwen3-ASR-0.6B">Qwen/Qwen3-ASR-0.6B</option>
-          <option value="Qwen/Qwen3-ASR-1.7B">Qwen/Qwen3-ASR-1.7B</option>
-        </select>
+        <label>模型（HF repo id 或本地绝对路径）</label>
+        <input id="model" placeholder="Qwen/Qwen3-ASR-0.6B 或 /abs/path/to/model" />
         <div class="row">
           <div>
             <label>设备</label>
@@ -129,7 +126,7 @@ VoiceType 40</textarea>
     }
     async function refreshState() {
       const s = await req("/v1/ui/state");
-      document.getElementById("model").value = s.config.model || "Qwen/Qwen3-ASR-0.6B";
+      document.getElementById("model").value = s.config.model || "";
       document.getElementById("device").value = s.config.device || "cpu";
       document.getElementById("language").value = s.config.default_language || "";
       document.getElementById("batch").value = s.config.max_inference_batch_size || 1;

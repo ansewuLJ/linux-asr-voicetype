@@ -64,7 +64,8 @@ UV_CACHE_DIR=/tmp/uv-cache uv sync
 UV_CACHE_DIR=/tmp/uv-cache uv run voicetype serve \
   --host 127.0.0.1 \
   --port 8787 \
-  --model Qwen/Qwen3-ASR-0.6B
+  --model Qwen/Qwen3-ASR-0.6B \
+  --dtype bfloat16
 ```
 
 国内网络建议直接带镜像：
@@ -72,6 +73,7 @@ UV_CACHE_DIR=/tmp/uv-cache uv run voicetype serve \
 ```bash
 uv run voicetype serve \
   --model Qwen/Qwen3-ASR-0.6B \
+  --dtype bfloat16 \
   --hf-endpoint https://hf-mirror.com \
   --hf-probe-timeout-sec 2
 ```
@@ -107,6 +109,23 @@ UV_CACHE_DIR=/tmp/uv-cache uv sync --extra asr
 
 如果未安装 `qwen-asr`，服务会以 mock 输出运行，便于先打通端到端链路。
 默认不会 fallback 到 mock，模型不可用会直接启动失败退出。只有显式传 `--allow-mock` 才启用 mock。
+
+## Hugging Face 模型下载（无符号链接）
+
+基于 `huggingface_hub` 的下载接口实现，保证落地目录是完整真实文件，不使用符号链接。
+
+```bash
+uv run voicetype model download Qwen/Qwen3-ASR-0.6B \
+  --local-dir ~/.local/share/voicetype/models/Qwen3-ASR-0.6B \
+  --hf-endpoint https://hf-mirror.com
+```
+
+说明：
+
+- 下载后目录结构与仓库根目录一致。
+- 命令会进行符号链接校验，不允许残留链接。
+- 默认会移除 `--local-dir` 下的 `.cache/huggingface` 元数据目录；如需保留可加 `--keep-hf-metadata`。
+- 私有仓库可加 `--token <hf_token>`。
 
 ## HTTP API
 

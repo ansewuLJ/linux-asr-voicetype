@@ -66,7 +66,7 @@ def create_app(config: AppConfig) -> FastAPI:
     sessions = SessionManager(max_seconds=config.max_session_seconds)
     recorder = ArecordManager()
     hotwords: Hotwords = {}
-    allowed_models = ["Qwen/Qwen3-ASR-0.6B", "Qwen/Qwen3-ASR-1.7B"]
+    recommended_models = ["Qwen/Qwen3-ASR-0.6B", "Qwen/Qwen3-ASR-1.7B"]
 
     if config.hotwords_file:
         hotwords = parse_hotwords_text(Path(config.hotwords_file))
@@ -165,7 +165,7 @@ def create_app(config: AppConfig) -> FastAPI:
             "config": config.model_dump(),
             "hotwords": hotwords,
             "hotwords_count": count_hotwords(hotwords),
-            "model_options": allowed_models,
+            "model_options": recommended_models,
         }
 
     @app.post("/v1/ui/config")
@@ -173,14 +173,15 @@ def create_app(config: AppConfig) -> FastAPI:
         nonlocal config
         nonlocal engine
 
+        model = req.model.strip()
+        if not model:
+            raise HTTPException(status_code=400, detail="model must not be empty")
         if req.max_inference_batch_size < 1:
             raise HTTPException(status_code=400, detail="max_inference_batch_size must be >= 1")
-        if req.model not in allowed_models:
-            raise HTTPException(status_code=400, detail=f"unsupported model: {req.model}")
 
         new_config = config.model_copy(
             update={
-                "model": req.model,
+                "model": model,
                 "device": req.device,
                 "default_language": req.default_language,
                 "max_inference_batch_size": req.max_inference_batch_size,

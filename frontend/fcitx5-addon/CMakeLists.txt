@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Fcitx5Core REQUIRED)
+find_package(Fcitx5Config REQUIRED)
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
@@ -18,6 +19,7 @@ endif()
 
 target_link_libraries(voicetype-fcitx5 PRIVATE
     Fcitx5::Core
+    Fcitx5::Config
     CURL::libcurl
     nlohmann_json::nlohmann_json
 )

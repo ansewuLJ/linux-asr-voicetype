@@ -62,13 +62,20 @@ class QwenEngine:
         try:
             from qwen_asr import Qwen3ASRModel  # type: ignore
 
+            model_kwargs: dict[str, object] = {
+                "device_map": self._config.device,
+                "max_inference_batch_size": self._config.max_inference_batch_size,
+            }
+            dtype_obj = self._resolve_torch_dtype(self._config.dtype)
+            if dtype_obj is not None:
+                model_kwargs["dtype"] = dtype_obj
+
             self._model = Qwen3ASRModel.from_pretrained(
                 self._config.model,
-                device_map=self._config.device,
-                max_inference_batch_size=self._config.max_inference_batch_size,
+                **model_kwargs,
             )
             self._backend = self._config.backend
-            LOGGER.info("Loaded model: %s", self._config.model)
+            LOGGER.info("Loaded model: %s (dtype=%s)", self._config.model, self._config.dtype)
         except Exception as exc:  # noqa: BLE001
             if self._config.use_mock_when_unavailable:
                 LOGGER.warning("Model load failed, fallback to mock engine: %s", exc)
@@ -76,6 +83,29 @@ class QwenEngine:
                 self._backend = "mock"
                 return
             raise
+
+    def _resolve_torch_dtype(self, dtype_name: str | None):
+        if not dtype_name:
+            return None
+        try:
+            import torch  # type: ignore
+        except Exception:  # noqa: BLE001
+            LOGGER.warning("torch unavailable, ignore dtype=%s", dtype_name)
+            return None
+        lowered = str(dtype_name).strip().lower()
+        mapping = {
+            "bfloat16": "bfloat16",
+            "bf16": "bfloat16",
+            "float16": "float16",
+            "fp16": "float16",
+            "float32": "float32",
+            "fp32": "float32",
+        }
+        attr = mapping.get(lowered)
+        if not attr or not hasattr(torch, attr):
+            LOGGER.warning("unsupported dtype=%s, ignore it", dtype_name)
+            return None
+        return getattr(torch, attr)
 
     def _prepare_hf_env(self) -> None:
         if self._config.hf_endpoint:

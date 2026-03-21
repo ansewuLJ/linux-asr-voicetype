@@ -7,7 +7,7 @@ Category=Module
 Library=voicetype-fcitx5
 Type=SharedLibrary
 OnDemand=False
-Configurable=False
+Configurable=True
 Version=@PROJECT_VERSION@
 
 [Addon/Dependencies]

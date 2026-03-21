@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import logging
 import os
 import shutil
@@ -26,6 +25,7 @@ class RuntimeConfigUpdateRequest(BaseModel):
     port: int = 8787
     model: str
     device: str
+    dtype: str | None = "bfloat16"
     hf_endpoint: str | None = None
 
 
@@ -379,15 +379,21 @@ def render_controller_ui() -> str:
     <div class="grid">
       <section class="card">
         <h2>运行配置</h2>
-        <label>模型</label>
-        <select id="model">
-          <option value="Qwen/Qwen3-ASR-0.6B">Qwen/Qwen3-ASR-0.6B</option>
-          <option value="Qwen/Qwen3-ASR-1.7B">Qwen/Qwen3-ASR-1.7B</option>
-        </select>
+        <label>模型（HF repo id 或本地绝对路径）</label>
+        <input id="model" placeholder="Qwen/Qwen3-ASR-0.6B 或 /abs/path/to/model" />
         <div class="row">
           <div>
             <label>设备</label>
             <select id="device"></select>
+          </div>
+          <div>
+            <label>精度 dtype</label>
+            <select id="dtype">
+              <option value="bfloat16">bfloat16（推荐）</option>
+              <option value="float16">float16</option>
+              <option value="float32">float32</option>
+              <option value="">自动（不指定）</option>
+            </select>
           </div>
         </div>
         <div class="row">
@@ -513,6 +519,7 @@ centos 20</textarea>
       const c = s.config;
       model.value = c.model;
       await refreshDevices(c.device);
+      dtype.value = c.dtype || "";
       host.value = c.host; port.value = c.port;
       hf_endpoint.value = c.hf_endpoint || "";
       hotkeyEnabled.checked = !!c.global_hotkey_enabled;
@@ -549,6 +556,7 @@ centos 20</textarea>
       try {
         const body = {
           model: model.value, device: device.value,
+          dtype: dtype.value || null,
           host: host.value, port: Number(port.value),
           hf_endpoint: hf_endpoint.value || null
         };
@@ -818,18 +826,28 @@ def create_controller_app(config_file: Path, service_name: str = "voicetype.serv
 
     @app.post("/api/config")
     def update_config(req: RuntimeConfigUpdateRequest) -> dict[str, object]:
+        model = req.model.strip()
+        if not model:
+            raise HTTPException(status_code=400, detail="model must not be empty")
         prev_cfg = load_runtime_config(config_file)
         cfg = prev_cfg.model_copy(
             update={
                 "host": req.host,
                 "port": req.port,
-                "model": req.model,
+                "model": model,
                 "device": req.device,
+                "dtype": req.dtype,
                 "hf_endpoint": req.hf_endpoint,
             }
         )
         saved = save_runtime_config(cfg, config_file)
-        logger.info("runtime config updated: model=%s device=%s port=%s", cfg.model, cfg.device, cfg.port)
+        logger.info(
+            "runtime config updated: model=%s device=%s dtype=%s port=%s",
+            cfg.model,
+            cfg.device,
+            cfg.dtype,
+            cfg.port,
+        )
         return {"success": True, "path": str(saved)}
 
     @app.get("/api/hotkey/state")
