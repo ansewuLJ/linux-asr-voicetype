@@ -1,0 +1,42 @@
+[VoiceType/Host]
+Type=String
+DefaultValue=127.0.0.1
+Description=ASR Host
+LongDescription=需要与UI配置完全相同。通常保持 127.0.0.1。
+
+[VoiceType/Port]
+Type=Integer
+DefaultValue=8787
+Min=1
+Max=65535
+Description=ASR Port
+LongDescription=需要与UI配置完全相同。
+
+[VoiceType/HoldKey]
+Type=Hotkey
+DefaultValue=ALT_R
+Description=Hold-To-Talk Key
+LongDescription=按住开始录音，松开结束并上屏。
+
+[VoiceType/HoldModifier]
+Type=Enum
+DefaultValue=DISABLED
+EnumCount=7
+Enum0=DISABLED
+Enum1=ALT_R
+Enum2=ALT_L
+Enum3=CTRL_R
+Enum4=CTRL_L
+Enum5=SHIFT_R
+Enum6=SHIFT_L
+Description=Modifier Hold Key
+LongDescription=用于单修饰键按住录音。设置后优先于 Hold-To-Talk Key。
+
+[VoiceType/ToggleKey]
+Type=Hotkey
+DefaultValue=ALT_z
+Description=Toggle Recording Key
+LongDescription=按一次开始，再按一次结束并上屏。
+
+[DescriptionFile]
+LocaleDomain=fcitx

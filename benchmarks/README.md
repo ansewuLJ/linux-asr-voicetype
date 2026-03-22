@@ -88,3 +88,27 @@ python benchmarks/bench_onnx_folder.py \
   --warmup 1 \
   --repeat 5 \
   --output-json /home/lijie/code/audio-bench-results/onnx_cpu_bench_int8_summary.json
+
+
+## OpenVINO Qwen3-ASR
+
+完整步骤（独立 uv 环境、模型转换、CPU/GPU benchmark）见：
+
+- `benchmarks/OPENVINO_QWEN3_ASR_BENCH.md`
+
+快速跑法（默认你已完成模型转换）：
+
+```bash
+cd /home/lijie/code/linux-asr-voicetype
+source /home/lijie/code/.venv-openvino-asr/bin/activate
+
+python benchmarks/bench_openvino_qwen3_asr.py \
+  --audio-dir /home/lijie/code/audio \
+  --model-dir /home/lijie/data/models/Qwen3-ASR-0.6B-OV \
+  --device CPU \
+  --max-inference-batch-size 32 \
+  --helper-py /home/lijie/code/Qwen3-ASR/qwen_3_asr_helper.py \
+  --warmup 1 \
+  --repeat 5 \
+  --output-json /home/lijie/code/audio-bench-results/openvino_qwen3_asr_cpu.json
+```

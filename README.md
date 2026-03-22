@@ -1,6 +1,6 @@
 # linux-asr-voicetype
 
-独立语音输入项目：`fcitx5` 负责输入法前端，核心识别逻辑由 Python 服务承载，仅聚焦 `Qwen3-ASR-0.6B/1.7B`。
+独立语音输入项目：输入法前端支持 `fcitx4/fcitx5`，核心识别逻辑由 Python 服务承载，仅聚焦 `Qwen3-ASR-0.6B/1.7B`。
 
 ## 当前里程碑
 
@@ -23,6 +23,38 @@
 ```bash
 cd linux-asr-voicetype
 ./install.sh
+```
+
+### Fcitx5 最终可跑命令
+
+```bash
+cd /home/lijie/code/linux-asr-voicetype
+./install.sh --addon-target fcitx5
+
+# 重载输入法
+fcitx5 -r
+
+# 后端服务状态
+systemctl --user status voicetype.service --no-pager -l
+
+# 控制 UI（浏览器打开）
+# http://127.0.0.1:8790/ui
+```
+
+### Fcitx4 最终可跑命令
+
+```bash
+cd /home/lijie/code/linux-asr-voicetype
+./install.sh --addon-target fcitx4
+
+# 重载输入法
+fcitx -r
+
+# 后端服务状态
+systemctl --user status voicetype.service --no-pager -l
+
+# Fcitx4 语音按键配置文件
+# ~/.config/fcitx/conf/fcitx-voicetype.config
 ```
 
 常用参数示例：
@@ -144,9 +176,9 @@ uv run voicetype model download Qwen/Qwen3-ASR-0.6B \
 
 提供了一个极简 `fcitx5` addon：`frontend/fcitx5-addon`。
 
-- 热键：`Right Alt`（右 Alt）
-- 按住右 Alt：开始录音（调用 `/v1/recording/start`）
-- 松开右 Alt：停止录音并识别（调用 `/v1/recording/stop`），识别文本直接 commit
+- 支持按住说话（Hold）和按两次切换说话（Toggle）
+- 具体热键以 Fcitx5 插件配置为准
+- 识别链路：`/v1/recording/start` 与 `/v1/recording/stop`
 
 构建与安装：
 
@@ -158,6 +190,42 @@ sudo cmake --install build
 ```
 
 重启 `fcitx5` 后，在 addon 列表里启用 `VoiceType` 模块即可。
+
+## Fcitx4 Addon (MVP)
+
+提供了 Fcitx4 版本 addon：`frontend/fcitx4-addon`。
+
+- 支持按住说话（Hold）和按两次切换说话（Toggle）
+- 具体热键以 `~/.config/fcitx/conf/fcitx-voicetype.config` 为准
+- 识别链路：`/v1/recording/start` 与 `/v1/recording/stop`
+
+构建与安装：
+
+```bash
+cd /home/lijie/code/linux-asr-voicetype/frontend/fcitx4-addon
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+sudo cmake --install build
+```
+
+重启 `fcitx` 后，在 addon 列表里启用 `VoiceType` 模块即可。
+
+## Fcitx4 / Fcitx5 通用桥接（X11）
+
+如果你是 `fcitx4`（或不想编译 addon），可以直接用桥接进程：
+
+```bash
+uv run voicetype fcitx-bridge \
+  --base-url http://127.0.0.1:8787 \
+  --hold-key right_alt \
+  --toggle-key left_alt+z
+```
+
+说明：
+
+- `hold-key`：按住录音，松开结束并回填文本。
+- `toggle-key`：按一次开始，再按一次结束并回填文本。
+- 该桥接为 X11 路径，依赖 `pynput + xdotool`，可用于 `fcitx4/fcitx5`。
 
 ## 下一步
 

@@ -13,6 +13,8 @@ DTYPE="bfloat16"
 MAX_INFERENCE_BATCH_SIZE="1"
 HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
 INSTALL_ADDON="1"
+ADDON_TARGET="auto"
+RESOLVED_ADDON_TARGET=""
 INSTALL_DEPS="1"
 ENABLE_SERVICE="1"
 ENABLE_UI_SERVICE="1"
@@ -43,6 +45,7 @@ Options:
   --hf-endpoint <url>                      HF mirror endpoint (default: https://hf-mirror.com; pass empty to disable)
   --uv-index-url <url>                     Optional UV index mirror
   --no-addon                               Skip Fcitx5 addon build/install
+  --addon-target <auto|fcitx4|fcitx5>     Force addon target (default: auto)
   --no-deps                                Skip apt/dnf dependency installation
   --no-service                             Skip systemd user service install/start
   --no-ui-service                          Skip controller UI service install/start
@@ -70,6 +73,8 @@ while [[ $# -gt 0 ]]; do
     UV_INDEX_URL_DEFAULT="${2:-}"; shift 2 ;;
   --no-addon)
     INSTALL_ADDON="0"; shift ;;
+  --addon-target)
+    ADDON_TARGET="${2:-}"; shift 2 ;;
   --no-deps)
     INSTALL_DEPS="0"; shift ;;
   --no-service)
@@ -120,12 +125,22 @@ install_deps_ubuntu() {
     libcurl4-openssl-dev nlohmann-json3-dev alsa-utils xdotool
 
   if [[ "$INSTALL_ADDON" == "1" ]]; then
-    if sudo apt-get install -y fcitx5-dev; then
-      :
-    elif sudo apt-get install -y fcitx5-libs-dev fcitx5-modules-dev; then
+    if [[ "$ADDON_TARGET" == "fcitx5" || "$ADDON_TARGET" == "auto" ]]; then
+      if sudo apt-get install -y fcitx5-dev; then
+        RESOLVED_ADDON_TARGET="fcitx5"
+      elif sudo apt-get install -y fcitx5-libs-dev fcitx5-modules-dev; then
+        RESOLVED_ADDON_TARGET="fcitx5"
+      fi
+    fi
+    if [[ -z "$RESOLVED_ADDON_TARGET" && ( "$ADDON_TARGET" == "fcitx4" || "$ADDON_TARGET" == "auto" ) ]]; then
+      if sudo apt-get install -y fcitx-libs-dev; then
+        RESOLVED_ADDON_TARGET="fcitx4"
+      fi
+    fi
+    if [[ -n "$RESOLVED_ADDON_TARGET" ]]; then
       :
     else
-      log "Fcitx5 development packages not found on this distro; skipping addon install."
+      log "No usable fcitx addon development packages found; skipping addon install."
       INSTALL_ADDON="0"
     fi
   fi
@@ -138,8 +153,18 @@ install_deps_dnf() {
     libcurl-devel nlohmann-json-devel alsa-utils xdotool
 
   if [[ "$INSTALL_ADDON" == "1" ]]; then
-    if ! sudo dnf -y install fcitx5-devel; then
-      log "fcitx5-devel not found; skipping addon install."
+    if [[ "$ADDON_TARGET" == "fcitx5" || "$ADDON_TARGET" == "auto" ]]; then
+      if sudo dnf -y install fcitx5-devel; then
+        RESOLVED_ADDON_TARGET="fcitx5"
+      fi
+    fi
+    if [[ -z "$RESOLVED_ADDON_TARGET" && ( "$ADDON_TARGET" == "fcitx4" || "$ADDON_TARGET" == "auto" ) ]]; then
+      if sudo dnf -y install fcitx-devel; then
+        RESOLVED_ADDON_TARGET="fcitx4"
+      fi
+    fi
+    if [[ -z "$RESOLVED_ADDON_TARGET" ]]; then
+      log "No usable fcitx addon development packages found; skipping addon install."
       INSTALL_ADDON="0"
     fi
   fi
@@ -152,8 +177,18 @@ install_deps_yum() {
     libcurl-devel nlohmann-json-devel alsa-utils xdotool
 
   if [[ "$INSTALL_ADDON" == "1" ]]; then
-    if ! sudo yum -y install fcitx5-devel; then
-      log "fcitx5-devel not found; skipping addon install."
+    if [[ "$ADDON_TARGET" == "fcitx5" || "$ADDON_TARGET" == "auto" ]]; then
+      if sudo yum -y install fcitx5-devel; then
+        RESOLVED_ADDON_TARGET="fcitx5"
+      fi
+    fi
+    if [[ -z "$RESOLVED_ADDON_TARGET" && ( "$ADDON_TARGET" == "fcitx4" || "$ADDON_TARGET" == "auto" ) ]]; then
+      if sudo yum -y install fcitx-devel; then
+        RESOLVED_ADDON_TARGET="fcitx4"
+      fi
+    fi
+    if [[ -z "$RESOLVED_ADDON_TARGET" ]]; then
+      log "No usable fcitx addon development packages found; skipping addon install."
       INSTALL_ADDON="0"
     fi
   fi
@@ -187,18 +222,52 @@ run_uv_sync() {
   "$UV_BIN" pip install --python "$REPO_DIR/.venv/bin/python" "pynput>=1.7.7"
 }
 
-install_addon() {
-  log "Installing Fcitx5 addon ..."
-  sudo rm -f /usr/share/fcitx5/addon/qfinput.conf \
-             /usr/local/share/fcitx5/addon/qfinput.conf \
-             /usr/local/lib/fcitx5/qfinput-fcitx5.so
-  sudo find /usr/lib /usr/lib64 -type f -name "qfinput-fcitx5.so" -delete 2>/dev/null || true
+resolve_addon_target() {
+  if [[ -n "$RESOLVED_ADDON_TARGET" ]]; then
+    return
+  fi
+  if [[ "$ADDON_TARGET" == "fcitx5" || "$ADDON_TARGET" == "auto" ]]; then
+    if pkg-config --exists Fcitx5Core; then
+      RESOLVED_ADDON_TARGET="fcitx5"
+      return
+    fi
+  fi
+  if [[ "$ADDON_TARGET" == "fcitx4" || "$ADDON_TARGET" == "auto" ]]; then
+    if pkg-config --exists fcitx; then
+      RESOLVED_ADDON_TARGET="fcitx4"
+      return
+    fi
+  fi
+}
 
-  cd "$REPO_DIR/frontend/fcitx5-addon"
-  rm -rf build
-  cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-  cmake --build build -j"$(nproc)"
-  sudo cmake --install build
+install_addon() {
+  resolve_addon_target
+  if [[ "$RESOLVED_ADDON_TARGET" == "fcitx5" ]]; then
+    log "Installing Fcitx5 addon ..."
+    sudo rm -f /usr/share/fcitx5/addon/qfinput.conf \
+               /usr/local/share/fcitx5/addon/qfinput.conf \
+               /usr/local/lib/fcitx5/qfinput-fcitx5.so
+    sudo find /usr/lib /usr/lib64 -type f -name "qfinput-fcitx5.so" -delete 2>/dev/null || true
+
+    cd "$REPO_DIR/frontend/fcitx5-addon"
+    rm -rf build
+    cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+    cmake --build build -j"$(nproc)"
+    sudo cmake --install build
+    return
+  fi
+
+  if [[ "$RESOLVED_ADDON_TARGET" == "fcitx4" ]]; then
+    log "Installing Fcitx4 addon ..."
+    cd "$REPO_DIR/frontend/fcitx4-addon"
+    rm -rf build
+    cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+    cmake --build build -j"$(nproc)"
+    sudo cmake --install build
+    return
+  fi
+
+  log "No addon target can be resolved; skipping addon install."
 }
 
 install_user_service() {
@@ -330,8 +399,10 @@ main() {
 
   if [[ "$INSTALL_ADDON" == "1" ]]; then
     install_addon
+    log "Addon target: ${RESOLVED_ADDON_TARGET:-none}"
   else
-    log "Skipping Fcitx5 addon installation (--no-addon)."
+    log "Skipping Fcitx addon installation (--no-addon)."
+    log "You can still use Fcitx4/Fcitx5 via X11 bridge: ${UV_BIN} run voicetype fcitx-bridge --base-url http://${HOST}:${PORT}"
   fi
 
   if [[ "$ENABLE_SERVICE" == "1" ]]; then

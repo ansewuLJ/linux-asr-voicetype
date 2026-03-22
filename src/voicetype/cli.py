@@ -10,6 +10,7 @@ import uvicorn
 from .audio import encode_pcm16_wav_base64
 from .config import AppConfig, default_runtime_config_path, load_runtime_config, save_runtime_config
 from .controller_ui import create_controller_app
+from .fcitx_bridge import BridgeConfig, run_fcitx_x11_bridge
 from .model_downloader import download_hf_repo_snapshot
 from .server import run_server
 
@@ -103,6 +104,25 @@ def ui(
         save_runtime_config(AppConfig(), config_file)
     app_ui = create_controller_app(config_file=config_file)
     uvicorn.run(app_ui, host=host, port=port, log_level="info")
+
+
+@app.command("fcitx-bridge")
+def fcitx_bridge(
+    base_url: str = "http://127.0.0.1:8787",
+    hold_key: str = "right_alt",
+    toggle_key: str = "left_alt+z",
+    sample_rate: int = 16000,
+    type_delay_ms: int = 1,
+) -> None:
+    """Start X11 hotkey bridge (works on Fcitx4/Fcitx5 environments)."""
+    cfg = BridgeConfig(
+        base_url=base_url,
+        hold_key=hold_key,
+        toggle_key=toggle_key,
+        sample_rate=sample_rate,
+        type_delay_ms=type_delay_ms,
+    )
+    run_fcitx_x11_bridge(cfg)
 
 
 @app.command()
