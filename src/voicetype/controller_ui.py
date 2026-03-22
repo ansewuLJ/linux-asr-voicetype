@@ -19,14 +19,28 @@ from .config import (
     ui_log_file_path,
 )
 
+ASR_TRANSFORMERS_SERVICE = "asr-transformers.service"
+ASR_OPENVINO_SERVICE = "asr-openvino.service"
+ASR_MANAGER_UI_SERVICE = "asr-manager-ui.service"
+MANAGED_ASR_SERVICES = {
+    ASR_TRANSFORMERS_SERVICE,
+    ASR_OPENVINO_SERVICE,
+    ASR_MANAGER_UI_SERVICE,
+}
+
 
 class RuntimeConfigUpdateRequest(BaseModel):
     host: str = "127.0.0.1"
-    port: int = 8787
+    port: int = 8789
     model: str
     device: str
     dtype: str | None = "bfloat16"
     hf_endpoint: str | None = None
+
+
+class ConnectConfigRequest(BaseModel):
+    host: str = "127.0.0.1"
+    port: int = 8789
 
 
 class HotwordsTextRequest(BaseModel):
@@ -348,102 +362,78 @@ def render_controller_ui() -> str:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VoiceType 控制台</title>
+  <title>VoiceType 接入控制台</title>
   <style>
-    :root { --bg:#0f172a; --card:#111827; --line:#334155; --txt:#e2e8f0; --muted:#94a3b8; --ok:#16a34a; --bad:#ef4444; }
+    :root { --line:#d5deea; --txt:#1f2937; --muted:#6b7280; --card:#ffffff; --bg1:#f7f9fc; --bg2:#edf3fb; --bg3:#e8eef8; }
     * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; background:linear-gradient(160deg,#020617,#111827 45%,#1f2937); color:var(--txt); }
-    .wrap { max-width: 980px; margin: 28px auto; padding: 0 14px; }
+    html, body { min-height: 100%; }
+    body { margin:0; min-height:100vh; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; background:linear-gradient(160deg,var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%); color:var(--txt); }
+    .wrap { max-width: 980px; margin: 28px auto; padding: 0 14px 24px; }
     .grid { display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
-    .card { border:1px solid var(--line); background:rgba(17,24,39,.9); border-radius: 14px; padding:14px; }
+    .layout { display:grid; grid-template-columns: 1fr 1fr; grid-template-areas: "connect hotwords" "hotkey hotwords"; gap:14px; align-items:stretch; }
+    .card-connect { grid-area: connect; }
+    .card-hotkey { grid-area: hotkey; }
+    .card-hotwords { grid-area: hotwords; }
+    .card { border:1px solid var(--line); background:var(--card); border-radius: 14px; padding:14px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06); }
     h1 { margin:0 0 16px; }
-    h2 { margin:0 0 10px; font-size:16px; color:#cbd5e1; }
+    h2 { margin:0 0 10px; font-size:16px; color:#1f2937; }
     label { display:block; font-size:13px; color:var(--muted); margin:10px 0 6px; }
-    input, select, textarea { width:100%; border:1px solid #475569; background:#0b1220; color:#e5e7eb; border-radius:10px; padding:10px; font-size:14px; }
-    textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; }
-    .row { display:flex; gap:10px; }
-    .row > * { flex:1; }
+    input, select, textarea { width:100%; border:1px solid #c6d0df; background:#ffffff; color:#1f2937; border-radius:10px; padding:10px; font-size:14px; }
+    textarea { min-height: 140px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; }
     .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
-    button { border:1px solid #475569; background:#1e293b; color:#e2e8f0; border-radius:10px; padding:9px 12px; cursor:pointer; }
-    button.primary { background:#2563eb; border-color:#2563eb; }
-    button.warn { background:#d97706; border-color:#d97706; }
+    button { border:1px solid #c6d0df; background:#f8fafc; color:#1f2937; border-radius:10px; padding:9px 12px; cursor:pointer; }
+    button.primary { background:#2563eb; border-color:#2563eb; color:#ffffff; }
     .status { margin-top:10px; font-size:13px; color:var(--muted); white-space:pre-wrap; }
-    .ok { color:#4ade80; } .bad { color:#f87171; }
-    .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
-    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    .ok { color:#059669; } .bad { color:#dc2626; }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+      .layout { grid-template-columns: 1fr; grid-template-areas: "connect" "hotkey" "hotwords"; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>VoiceType 控制台</h1>
-    <div class="grid">
-      <section class="card">
-        <h2>运行配置</h2>
-        <label>模型（HF repo id 或本地绝对路径）</label>
-        <input id="model" placeholder="Qwen/Qwen3-ASR-0.6B 或 /abs/path/to/model" />
-        <div class="row">
-          <div>
-            <label>设备</label>
-            <select id="device"></select>
-          </div>
-          <div>
-            <label>精度 dtype</label>
-            <select id="dtype">
-              <option value="bfloat16">bfloat16（推荐）</option>
-              <option value="float16">float16</option>
-              <option value="float32">float32</option>
-              <option value="">自动（不指定）</option>
-            </select>
-          </div>
+    <h1>VoiceType 接入控制台</h1>
+    <div class="layout">
+      <section class="card card-connect">
+        <h2>接入配置</h2>
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+          <div><label>推理服务 Host</label><input id="host" placeholder="127.0.0.1" /></div>
+          <div><label>推理服务 Port</label><input id="port" type="number" placeholder="8789" /></div>
         </div>
-        <div class="row">
-          <div><label>服务 Host</label><input id="host" /></div>
-          <div><label>服务 Port</label><input id="port" type="number" /></div>
-        </div>
-        <div class="row">
-          <div><label>HF 镜像（清空=官方）</label><input id="hf_endpoint" placeholder="https://hf-mirror.com" /></div>
-        </div>
-        <div class="btns">
-          <button class="primary" id="saveCfg">保存配置</button>
-          <button id="startSvc">启动服务</button>
-          <button id="restartSvc">重载服务</button>
-          <button class="warn" id="stopSvc">停止服务</button>
-        </div>
-        <div class="status">先保存配置，再启动/重载服务</div>
+        <div class="btns"><button class="primary" id="saveConnect">保存接入配置并检查健康</button></div>
         <div id="cfgStatus" class="status"></div>
-        <details style="margin-top:10px;">
-          <summary style="cursor:pointer;color:#cbd5e1;">X11 全局热键（替代 Fcitx 可选）</summary>
-          <div style="margin-top:8px;">
-            <label style="display:flex;align-items:center;gap:8px;">
-              <input id="hotkeyEnabled" type="checkbox" style="width:auto;" />
-              启用全局按住说话（X11）
-            </label>
-            <label>快捷键</label>
-            <select id="hotkeyKey">
-              <option value="f7">f7</option>
-              <option value="f8">f8</option>
-              <option value="f9">f9</option>
-              <option value="f10">f10</option>
-              <option value="f11">f11</option>
-              <option value="f12">f12</option>
-              <option value="pause">pause</option>
-              <option value="scroll_lock">scroll_lock</option>
-              <option value="right_alt">right_alt</option>
-              <option value="left_alt">left_alt</option>
-              <option value="right_ctrl">right_ctrl</option>
-              <option value="left_ctrl">left_ctrl</option>
-            </select>
-            <div class="status">推荐优先：f10 / f9 / f8 / f7（通常比 Alt/Ctrl 稳定）</div>
-            <div class="btns">
-              <button id="saveHotkey">保存热键配置</button>
-            </div>
-            <div id="hotkeyStatus" class="status"></div>
-          </div>
-        </details>
       </section>
 
-      <section class="card">
-        <h2>热词维护（作用于正在运行的 ASR 服务）</h2>
+      <section class="card card-hotkey">
+        <h2>全局热键（X11）</h2>
+        <div class="status">说明：建议优先使用 Fcitx5；仅在 Fcitx 不可用时再启用全局热键。</div>
+        <label style="display:flex;align-items:center;gap:8px;">
+          <input id="hotkeyEnabled" type="checkbox" style="width:auto;" />
+          启用全局按住说话
+        </label>
+        <label>快捷键</label>
+        <select id="hotkeyKey">
+          <option value="f7">f7</option>
+          <option value="f8">f8</option>
+          <option value="f9">f9</option>
+          <option value="f10">f10</option>
+          <option value="f11">f11</option>
+          <option value="f12">f12</option>
+          <option value="pause">pause</option>
+          <option value="scroll_lock">scroll_lock</option>
+          <option value="right_alt">right_alt</option>
+          <option value="left_alt">left_alt</option>
+          <option value="right_ctrl">right_ctrl</option>
+          <option value="left_ctrl">left_ctrl</option>
+        </select>
+        <div class="btns"><button class="primary" id="saveHotkey">保存热键配置</button></div>
+        <div id="hotkeyStatus" class="status"></div>
+      </section>
+
+      <section class="card card-hotwords">
+        <h2>热词维护</h2>
+        <div class="status">说明：热词用于提升专有名词/术语（如人名、地名、项目名）的识别命中率，减少错字。你新增或修改词表后，点击“加载输入框热词”或“从文件加载热词”即可立刻生效。</div>
         <label>输入框热词（每行：词 或 词 权重）</label>
         <textarea id="hotText">pytorch 50
 centos 20</textarea>
@@ -457,25 +447,21 @@ centos 20</textarea>
         <div id="hotStatus" class="status"></div>
       </section>
     </div>
-    <section class="card" style="margin-top:14px">
-      <h2>日志</h2>
-      <div class="btns">
-        <button id="refreshLog">刷新日志</button>
-        <button id="openAsrLogView">查看 ASR 服务日志详情</button>
-        <button id="openUiLogView">查看控制台服务日志详情</button>
-      </div>
-      <details style="margin-top:8px;">
-        <summary style="cursor:pointer;color:#cbd5e1;">ASR 服务日志（最近 200 行预览）</summary>
-        <textarea id="asrLog" readonly></textarea>
-      </details>
-      <details style="margin-top:8px;">
-        <summary style="cursor:pointer;color:#cbd5e1;">控制台服务日志（最近 200 行预览）</summary>
-        <textarea id="uiLog" readonly></textarea>
-      </details>
-      <div id="logStatus" class="status"></div>
-    </section>
   </div>
+
   <script>
+    const host = document.getElementById('host');
+    const port = document.getElementById('port');
+    const saveConnect = document.getElementById('saveConnect');
+    const hotkeyEnabled = document.getElementById('hotkeyEnabled');
+    const hotkeyKey = document.getElementById('hotkeyKey');
+    const saveHotkey = document.getElementById('saveHotkey');
+    const hotText = document.getElementById('hotText');
+    const hotFile = document.getElementById('hotFile');
+    const loadHotText = document.getElementById('loadHotText');
+    const loadHotFile = document.getElementById('loadHotFile');
+    const clearHot = document.getElementById('clearHot');
+
     async function req(url, opt) {
       const r = await fetch(url, opt);
       const text = await r.text();
@@ -483,146 +469,137 @@ centos 20</textarea>
       if (!r.ok) throw new Error(json.detail || text || ("HTTP " + r.status));
       return json;
     }
+
     function setStatus(id, msg, ok=true) {
       const el = document.getElementById(id);
       el.textContent = msg;
       el.className = "status " + (ok ? "ok" : "bad");
     }
+
     function restoreHotwordFilePath() {
       const saved = localStorage.getItem("voicetype.hotword_file_path");
       if (saved) hotFile.value = saved;
     }
+
     function persistHotwordFilePath() {
       localStorage.setItem("voicetype.hotword_file_path", hotFile.value || "");
     }
-    async function refreshDevices(selectedValue) {
-      const out = await req("/api/devices");
-      device.innerHTML = "";
-      const values = new Set();
-      for (const d of (out.devices || [])) {
-        const opt = document.createElement("option");
-        opt.value = d.value;
-        opt.textContent = d.label || d.value;
-        device.appendChild(opt);
-        values.add(d.value);
-      }
-      if (selectedValue && !values.has(selectedValue)) {
-        const opt = document.createElement("option");
-        opt.value = selectedValue;
-        opt.textContent = selectedValue + " (自定义)";
-        device.appendChild(opt);
-      }
-      device.value = selectedValue || "cpu";
-    }
+
     async function refreshState() {
-      const s = await req("/api/state");
+      const s = await req('/api/state');
       const c = s.config;
-      model.value = c.model;
-      await refreshDevices(c.device);
-      dtype.value = c.dtype || "";
-      host.value = c.host; port.value = c.port;
-      hf_endpoint.value = c.hf_endpoint || "";
+      host.value = c.host || '127.0.0.1';
+      port.value = c.port || 8789;
       hotkeyEnabled.checked = !!c.global_hotkey_enabled;
-      hotkeyKey.value = c.global_hotkey_key || "right_alt";
+      hotkeyKey.value = c.global_hotkey_key || 'right_alt';
       await refreshHotkeyState();
+      await refreshConnectHealth();
     }
+
+    function connectStatusText(ok, err='') {
+      if (ok) return '推理服务状态：在线';
+      if (!err) return '推理服务状态：离线';
+      return '推理服务状态：离线\\n' + err;
+    }
+
+    async function refreshConnectHealth() {
+      try {
+        const out = await req('/api/connect-health');
+        setStatus('cfgStatus', connectStatusText(!!out.health_ok, out.health_error || ''), !!out.health_ok);
+      } catch (e) {
+        setStatus('cfgStatus', '推理服务状态：离线\\n' + String(e), false);
+      }
+    }
+
     async function refreshHotkeyState() {
       try {
-        const hk = await req("/api/hotkey/state");
-        const phaseMap = { idle: "空闲", recording: "说话中", transcribing: "识别中", error: "异常" };
-        let msg = "状态: " + (hk.running ? "运行中" : "未运行");
-        msg += " | 阶段: " + (phaseMap[hk.phase] || hk.phase || "未知");
-        msg += " | 会话: " + (hk.session_type || "unknown");
-        msg += " | 快捷键: " + (hk.hotkey || "right_alt");
-        if (hk.last_error) {
-          msg += "\\n错误: " + hk.last_error;
-        }
-        setStatus("hotkeyStatus", msg, !hk.last_error);
+        const hk = await req('/api/hotkey/state');
+        const phaseMap = { idle: '空闲', recording: '说话中', transcribing: '识别中', error: '异常' };
+        let msg = '状态: ' + (hk.running ? '运行中' : '未运行');
+        msg += ' | 阶段: ' + (phaseMap[hk.phase] || hk.phase || '未知');
+        msg += ' | 快捷键: ' + (hk.hotkey || 'right_alt');
+        if (hk.last_error) msg += '\\n错误: ' + hk.last_error;
+        setStatus('hotkeyStatus', msg, !hk.last_error);
       } catch (e) {
-        setStatus("hotkeyStatus", String(e), false);
+        setStatus('hotkeyStatus', String(e), false);
       }
     }
-    async function refreshLogs() {
+
+    saveConnect.addEventListener('click', async () => {
       try {
-        const data = await req("/api/logs?lines=200");
-        asrLog.value = data.asr_log || "";
-        uiLog.value = data.ui_log || "";
-        setStatus("logStatus", "日志路径\\nASR: " + data.asr_log_path + "\\nUI: " + data.ui_log_path, true);
+        const out = await req('/api/connect-config', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ host: host.value, port: Number(port.value) })
+        });
+        setStatus('cfgStatus', connectStatusText(!!out.health_ok, out.health_error || ''), !!out.health_ok);
       } catch (e) {
-        setStatus("logStatus", String(e), false);
+        setStatus('cfgStatus', '推理服务状态：离线\\n' + String(e), false);
       }
-    }
-    saveCfg.onclick = async () => {
+    });
+
+    saveHotkey.addEventListener('click', async () => {
       try {
-        const body = {
-          model: model.value, device: device.value,
-          dtype: dtype.value || null,
-          host: host.value, port: Number(port.value),
-          hf_endpoint: hf_endpoint.value || null
-        };
-        const out = await req("/api/config", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
-        setStatus("cfgStatus", "配置已保存\\n" + JSON.stringify(out, null, 2), true);
-        await refreshState();
-      } catch (e) { setStatus("cfgStatus", String(e), false); }
-    };
-    startSvc.onclick = async () => { try { const out = await req("/api/service/start", {method:"POST"}); setStatus("cfgStatus", JSON.stringify(out, null, 2), true); await refreshState(); } catch(e){ setStatus("cfgStatus", String(e), false);} };
-    restartSvc.onclick = async () => { try { const out = await req("/api/service/restart", {method:"POST"}); setStatus("cfgStatus", JSON.stringify(out, null, 2), true); await refreshState(); } catch(e){ setStatus("cfgStatus", String(e), false);} };
-    stopSvc.onclick = async () => { try { const out = await req("/api/service/stop", {method:"POST"}); setStatus("cfgStatus", JSON.stringify(out, null, 2), true); await refreshState(); } catch(e){ setStatus("cfgStatus", String(e), false);} };
-    saveHotkey.onclick = async () => {
-      try {
-        const body = {
-          enabled: !!hotkeyEnabled.checked,
-          hotkey: hotkeyKey.value || "right_alt"
-        };
-        const out = await req("/api/hotkey/config", {
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
+        const body = { enabled: !!hotkeyEnabled.checked, hotkey: hotkeyKey.value || 'right_alt' };
+        const out = await req('/api/hotkey/config', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify(body)
         });
-        setStatus("hotkeyStatus", JSON.stringify(out.hotkey || out, null, 2), true);
+        setStatus('hotkeyStatus', JSON.stringify(out.hotkey || out, null, 2), true);
         await refreshState();
-      } catch (e) { setStatus("hotkeyStatus", String(e), false); }
-    };
-    loadHotText.onclick = async () => {
+      } catch (e) {
+        setStatus('hotkeyStatus', String(e), false);
+      }
+    });
+
+    loadHotText.addEventListener('click', async () => {
       try {
-        const out = await req("/api/hotwords/text", {
-          method:"POST", headers:{"Content-Type":"application/json"},
+        const out = await req('/api/hotwords/text', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify({text: hotText.value})
         });
         if (out.effective_text !== undefined) hotText.value = out.effective_text;
-        setStatus("hotStatus", JSON.stringify(out, null, 2), true);
-      } catch (e) { setStatus("hotStatus", String(e), false); }
-    };
-    loadHotFile.onclick = async () => {
+        setStatus('hotStatus', JSON.stringify(out, null, 2), true);
+      } catch (e) {
+        setStatus('hotStatus', String(e), false);
+      }
+    });
+
+    loadHotFile.addEventListener('click', async () => {
       try {
         persistHotwordFilePath();
-        const out = await req("/api/hotwords/file", {
-          method:"POST", headers:{"Content-Type":"application/json"},
+        const out = await req('/api/hotwords/file', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify({path: hotFile.value})
         });
         if (out.effective_text !== undefined) hotText.value = out.effective_text;
-        setStatus("hotStatus", JSON.stringify(out, null, 2), true);
-      } catch (e) { setStatus("hotStatus", String(e), false); }
-    };
-    clearHot.onclick = async () => {
+        setStatus('hotStatus', JSON.stringify(out, null, 2), true);
+      } catch (e) {
+        setStatus('hotStatus', String(e), false);
+      }
+    });
+
+    clearHot.addEventListener('click', async () => {
       try {
-        const out = await req("/api/hotwords", {method:"DELETE"});
-        hotText.value = "";
-        hotFile.value = "";
+        const out = await req('/api/hotwords', {method:'DELETE'});
+        hotText.value = '';
+        hotFile.value = '';
         persistHotwordFilePath();
-        setStatus("hotStatus", JSON.stringify(out, null, 2), true);
-      } catch (e) { setStatus("hotStatus", String(e), false); }
-    };
-    hotFile.addEventListener("change", persistHotwordFilePath);
-    hotFile.addEventListener("input", persistHotwordFilePath);
+        setStatus('hotStatus', JSON.stringify(out, null, 2), true);
+      } catch (e) {
+        setStatus('hotStatus', String(e), false);
+      }
+    });
+
+    hotFile.addEventListener('change', persistHotwordFilePath);
+    hotFile.addEventListener('input', persistHotwordFilePath);
     restoreHotwordFilePath();
-    refreshLog.onclick = () => refreshLogs();
-    openAsrLogView.onclick = () => window.open("/ui/logs/asr", "_blank");
-    openUiLogView.onclick = () => window.open("/ui/logs/ui", "_blank");
-    refreshState().catch(e => setStatus("cfgStatus", String(e), false));
-    refreshLogs();
-    setInterval(refreshLogs, 3000);
-    setInterval(refreshHotkeyState, 600);
+
+    refreshState();
+    setInterval(refreshHotkeyState, 1000);
   </script>
 </body>
 </html>
@@ -712,7 +689,7 @@ def render_log_view_ui(log_type: str) -> str:
 """
 
 
-def create_controller_app(config_file: Path, service_name: str = "voicetype.service") -> FastAPI:
+def create_controller_app(config_file: Path) -> FastAPI:
     app = FastAPI(title="VoiceType Controller", version="0.1.0")
     _setup_ui_file_logging()
     logger = logging.getLogger("voicetype.controller")
@@ -720,6 +697,16 @@ def create_controller_app(config_file: Path, service_name: str = "voicetype.serv
     def _asr_base_url() -> str:
         cfg = load_runtime_config(config_file)
         return f"http://{cfg.host}:{cfg.port}"
+
+    def _check_health(base_url: str) -> tuple[bool, str]:
+        try:
+            with httpx.Client(timeout=3.0) as client:
+                resp = client.get(f"{base_url}/health")
+                if resp.status_code < 400:
+                    return True, ""
+                return False, f"HTTP {resp.status_code}: {resp.text[:200]}"
+        except Exception as exc:  # noqa: BLE001
+            return False, str(exc)
 
     def _asr_request(method: str, path: str, payload: dict[str, object] | None = None) -> dict[str, object]:
         url = f"{_asr_base_url()}{path}"
@@ -748,6 +735,10 @@ def create_controller_app(config_file: Path, service_name: str = "voicetype.serv
     def shutdown() -> None:
         hotkey_bridge.stop()
 
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    def root() -> HTMLResponse:
+        return HTMLResponse(render_controller_ui())
+
     @app.get("/ui", response_class=HTMLResponse)
     def ui() -> HTMLResponse:
         return HTMLResponse(render_controller_ui())
@@ -763,16 +754,38 @@ def create_controller_app(config_file: Path, service_name: str = "voicetype.serv
     @app.get("/api/state")
     def state() -> dict[str, object]:
         cfg = load_runtime_config(config_file)
-        active_code, _ = _run_systemctl_user("is-active", service_name)
-        enabled_code, _ = _run_systemctl_user("is-enabled", service_name)
+        active_service = (
+            ASR_OPENVINO_SERVICE
+            if str(cfg.backend).strip().lower() == "openvino"
+            else ASR_TRANSFORMERS_SERVICE
+        )
+        active_code, _ = _run_systemctl_user("is-active", active_service)
+        enabled_code, _ = _run_systemctl_user("is-enabled", active_service)
+        managed: dict[str, dict[str, bool]] = {}
+        for svc in sorted(MANAGED_ASR_SERVICES):
+            a, _ = _run_systemctl_user("is-active", svc)
+            e, _ = _run_systemctl_user("is-enabled", svc)
+            managed[svc] = {"active": a == 0, "enabled": e == 0}
         return {
             "config": cfg.model_dump(),
             "service": {
                 "active": active_code == 0,
                 "enabled": enabled_code == 0,
+                "name": active_service,
+                "active_service": active_service,
+                "managed": managed,
             },
             "hotkey": hotkey_bridge.state(),
         }
+
+    @app.get("/api/services")
+    def services() -> dict[str, object]:
+        managed: dict[str, dict[str, bool]] = {}
+        for svc in sorted(MANAGED_ASR_SERVICES):
+            a, _ = _run_systemctl_user("is-active", svc)
+            e, _ = _run_systemctl_user("is-enabled", svc)
+            managed[svc] = {"active": a == 0, "enabled": e == 0}
+        return {"services": managed}
 
     @app.get("/api/devices")
     def devices() -> dict[str, object]:
@@ -781,6 +794,35 @@ def create_controller_app(config_file: Path, service_name: str = "voicetype.serv
     @app.get("/api/asr-base")
     def asr_base() -> dict[str, str]:
         return {"url": _asr_base_url()}
+
+    @app.get("/api/connect-health")
+    def connect_health() -> dict[str, object]:
+        base_url = _asr_base_url()
+        ok, err = _check_health(base_url)
+        return {"base_url": base_url, "health_ok": ok, "health_error": err}
+
+    @app.post("/api/connect-config")
+    def connect_config(req: ConnectConfigRequest) -> dict[str, object]:
+        host = req.host.strip()
+        if not host:
+            raise HTTPException(status_code=400, detail="host must not be empty")
+        if req.port <= 0 or req.port > 65535:
+            raise HTTPException(status_code=400, detail="port must be 1..65535")
+
+        prev_cfg = load_runtime_config(config_file)
+        cfg = prev_cfg.model_copy(update={"host": host, "port": req.port})
+        saved = save_runtime_config(cfg, config_file)
+
+        base_url = f"http://{host}:{req.port}"
+        health_ok, health_error = _check_health(base_url)
+
+        return {
+            "success": True,
+            "path": str(saved),
+            "base_url": base_url,
+            "health_ok": health_ok,
+            "health_error": health_error,
+        }
 
     @app.get("/api/logs")
     def logs(lines: int = 200) -> dict[str, str]:
@@ -867,31 +909,42 @@ def create_controller_app(config_file: Path, service_name: str = "voicetype.serv
         return {"success": True, "path": str(saved), "hotkey": hotkey_bridge.state()}
 
 
+    def _resolve_service(target: str | None = None) -> str:
+        if target and target in MANAGED_ASR_SERVICES:
+            return target
+        cfg = load_runtime_config(config_file)
+        if str(cfg.backend).strip().lower() == "openvino":
+            return ASR_OPENVINO_SERVICE
+        return ASR_TRANSFORMERS_SERVICE
+
     @app.post("/api/service/start")
-    def start_service() -> dict[str, object]:
+    def start_service(service: str | None = None) -> dict[str, object]:
+        resolved = _resolve_service(service)
         killed = _kill_unmanaged_asr_processes()
-        code, output = _run_systemctl_user("start", service_name)
+        code, output = _run_systemctl_user("start", resolved)
         if code != 0:
             raise HTTPException(status_code=500, detail=output or "start failed")
-        logger.info("service started: %s", service_name)
-        return {"success": True, "killed_unmanaged": killed}
+        logger.info("service started: %s", resolved)
+        return {"success": True, "service": resolved, "killed_unmanaged": killed}
 
     @app.post("/api/service/restart")
-    def restart_service() -> dict[str, object]:
+    def restart_service(service: str | None = None) -> dict[str, object]:
+        resolved = _resolve_service(service)
         killed = _kill_unmanaged_asr_processes()
-        code, output = _run_systemctl_user("restart", service_name)
+        code, output = _run_systemctl_user("restart", resolved)
         if code != 0:
             raise HTTPException(status_code=500, detail=output or "restart failed")
-        logger.info("service restarted: %s", service_name)
-        return {"success": True, "killed_unmanaged": killed}
+        logger.info("service restarted: %s", resolved)
+        return {"success": True, "service": resolved, "killed_unmanaged": killed}
 
     @app.post("/api/service/stop")
-    def stop_service() -> dict[str, object]:
-        code, output = _run_systemctl_user("stop", service_name)
+    def stop_service(service: str | None = None) -> dict[str, object]:
+        resolved = _resolve_service(service)
+        code, output = _run_systemctl_user("stop", resolved)
         if code != 0:
             raise HTTPException(status_code=500, detail=output or "stop failed")
-        logger.info("service stopped: %s", service_name)
-        return {"success": True}
+        logger.info("service stopped: %s", resolved)
+        return {"success": True, "service": resolved}
 
     @app.post("/api/hotwords/text")
     def hotwords_from_text(req: HotwordsTextRequest) -> dict[str, object]:

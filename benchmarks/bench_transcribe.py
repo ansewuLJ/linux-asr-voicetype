@@ -41,7 +41,7 @@ def round_summary(summary: dict[str, object], ndigits: int = 3) -> dict[str, obj
 def main() -> None:
     ap = argparse.ArgumentParser(description="Benchmark /v1/transcribe latency on fixed wav set.")
     ap.add_argument("--audio-dir", type=Path, required=True, help="Absolute directory path to auto-scan wav files")
-    ap.add_argument("--base-url", default="http://127.0.0.1:8787", help="ASR server base URL")
+    ap.add_argument("--base-url", default="http://127.0.0.1:8789", help="ASR server base URL")
     ap.add_argument("--repeat", type=int, default=3, help="Repeat each sample N times")
     ap.add_argument("--warmup", type=int, default=1, help="Warmup rounds per sample")
     ap.add_argument("--language", default=None, help="Optional language hint, e.g. zh/en")

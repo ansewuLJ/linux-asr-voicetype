@@ -24,7 +24,7 @@
 namespace {
 
 constexpr const char *kDefaultHost = "127.0.0.1";
-constexpr int kDefaultPort = 8787;
+constexpr int kDefaultPort = 8789;
 constexpr const char *kVoiceTypeConfigPath = "conf/voicetype.conf";
 
 struct VoiceTypeSettings {
@@ -453,7 +453,7 @@ private:
   fcitx::Key toggleKey_ = fcitx::Key("Alt+z");
   bool togglePressed_ = false;
   mutable std::unique_ptr<VoiceTypeConfig> uiConfig_;
-  std::string asrBaseUrl_ = "http://127.0.0.1:8787";
+  std::string asrBaseUrl_ = "http://127.0.0.1:8789";
   bool recording_ = false;
   bool recordingByToggle_ = false;
   bool triggerHeld_ = false;

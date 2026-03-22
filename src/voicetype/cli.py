@@ -8,6 +8,7 @@ import typer
 import uvicorn
 
 from .audio import encode_pcm16_wav_base64
+from .asr_manager_ui import create_asr_manager_app
 from .config import AppConfig, default_runtime_config_path, load_runtime_config, save_runtime_config
 from .controller_ui import create_controller_app
 from .fcitx_bridge import BridgeConfig, run_fcitx_x11_bridge
@@ -50,7 +51,7 @@ def _config_from_options(
 @app.command()
 def serve(
     host: str = "127.0.0.1",
-    port: int = 8787,
+    port: int = 8789,
     model: str = "Qwen/Qwen3-ASR-0.6B",
     device: str = "cuda:0",
     backend: str = "transformers",
@@ -106,9 +107,19 @@ def ui(
     uvicorn.run(app_ui, host=host, port=port, log_level="info")
 
 
+@app.command("asr-manager-ui")
+def asr_manager_ui(
+    host: str = "127.0.0.1",
+    port: int = 8788,
+) -> None:
+    """Start ASR service manager UI (systemd ops only)."""
+    app_ui = create_asr_manager_app()
+    uvicorn.run(app_ui, host=host, port=port, log_level="info")
+
+
 @app.command("fcitx-bridge")
 def fcitx_bridge(
-    base_url: str = "http://127.0.0.1:8787",
+    base_url: str = "http://127.0.0.1:8789",
     hold_key: str = "right_alt",
     toggle_key: str = "left_alt+z",
     sample_rate: int = 16000,
@@ -126,7 +137,7 @@ def fcitx_bridge(
 
 
 @app.command()
-def health(base_url: str = "http://127.0.0.1:8787") -> None:
+def health(base_url: str = "http://127.0.0.1:8789") -> None:
     """Check server health."""
     with httpx.Client(timeout=5.0) as client:
         resp = client.get(f"{base_url}/health")

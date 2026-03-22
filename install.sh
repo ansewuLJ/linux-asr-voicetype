@@ -5,18 +5,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$SCRIPT_DIR"
 
-HOST="127.0.0.1"
-PORT="8787"
-MODEL="Qwen/Qwen3-ASR-0.6B"
-DEVICE="cpu"
-DTYPE="bfloat16"
-MAX_INFERENCE_BATCH_SIZE="1"
-HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
 INSTALL_ADDON="1"
 ADDON_TARGET="auto"
 RESOLVED_ADDON_TARGET=""
 INSTALL_DEPS="1"
-ENABLE_SERVICE="1"
 ENABLE_UI_SERVICE="1"
 UV_INDEX_URL_DEFAULT="${UV_INDEX_URL:-}"
 
@@ -32,43 +24,21 @@ die() {
 }
 
 usage() {
-  cat <<'EOF'
+  cat <<'USAGE'
 Usage: ./install.sh [options]
 
 Options:
-  --host <host>                            API bind host (default: 127.0.0.1)
-  --port <port>                            API bind port (default: 8787)
-  --model <model>                          Model repo/path (default: Qwen/Qwen3-ASR-0.6B)
-  --device <device>                        Device map, e.g. cpu/cuda:0 (default: cpu)
-  --dtype <dtype>                          Torch dtype (default: bfloat16; empty to disable)
-  --max-inference-batch-size <n>           Inference batch upper bound (default: 1)
-  --hf-endpoint <url>                      HF mirror endpoint (default: https://hf-mirror.com; pass empty to disable)
   --uv-index-url <url>                     Optional UV index mirror
-  --no-addon                               Skip Fcitx5 addon build/install
-  --addon-target <auto|fcitx4|fcitx5>     Force addon target (default: auto)
+  --no-addon                               Skip Fcitx addon build/install
+  --addon-target <auto|fcitx4|fcitx5>      Force addon target (default: auto)
   --no-deps                                Skip apt/dnf dependency installation
-  --no-service                             Skip systemd user service install/start
   --no-ui-service                          Skip controller UI service install/start
   -h, --help                               Show this help
-EOF
+USAGE
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-  --host)
-    HOST="${2:-}"; shift 2 ;;
-  --port)
-    PORT="${2:-}"; shift 2 ;;
-  --model)
-    MODEL="${2:-}"; shift 2 ;;
-  --device)
-    DEVICE="${2:-}"; shift 2 ;;
-  --dtype)
-    DTYPE="${2:-}"; shift 2 ;;
-  --max-inference-batch-size)
-    MAX_INFERENCE_BATCH_SIZE="${2:-}"; shift 2 ;;
-  --hf-endpoint)
-    HF_ENDPOINT="${2:-}"; shift 2 ;;
   --uv-index-url)
     UV_INDEX_URL_DEFAULT="${2:-}"; shift 2 ;;
   --no-addon)
@@ -77,8 +47,6 @@ while [[ $# -gt 0 ]]; do
     ADDON_TARGET="${2:-}"; shift 2 ;;
   --no-deps)
     INSTALL_DEPS="0"; shift ;;
-  --no-service)
-    ENABLE_SERVICE="0"; shift ;;
   --no-ui-service)
     ENABLE_UI_SERVICE="0"; shift ;;
   -h|--help)
@@ -137,9 +105,7 @@ install_deps_ubuntu() {
         RESOLVED_ADDON_TARGET="fcitx4"
       fi
     fi
-    if [[ -n "$RESOLVED_ADDON_TARGET" ]]; then
-      :
-    else
+    if [[ -z "$RESOLVED_ADDON_TARGET" ]]; then
       log "No usable fcitx addon development packages found; skipping addon install."
       INSTALL_ADDON="0"
     fi
@@ -270,68 +236,7 @@ install_addon() {
   log "No addon target can be resolved; skipping addon install."
 }
 
-install_user_service() {
-  local user_service_dir="$HOME/.config/systemd/user"
-  local unit_file="$user_service_dir/voicetype.service"
-  local runtime_config_file="$HOME/.config/voicetype/runtime.json"
-  local hf_endpoint_json="null"
-  local dtype_json="null"
-  mkdir -p "$user_service_dir"
-  mkdir -p "$(dirname "$runtime_config_file")"
-  if [[ -n "$HF_ENDPOINT" ]]; then
-    hf_endpoint_json="\"$HF_ENDPOINT\""
-  fi
-  if [[ -n "$DTYPE" ]]; then
-    dtype_json="\"$DTYPE\""
-  fi
-  cat >"$runtime_config_file" <<EOF
-{
-  "host": "${HOST}",
-  "port": ${PORT},
-  "model": "${MODEL}",
-  "device": "${DEVICE}",
-  "backend": "transformers",
-  "dtype": ${dtype_json},
-  "default_language": "",
-  "max_session_seconds": 120,
-  "hotwords_file": null,
-  "log_level": "info",
-  "use_mock_when_unavailable": false,
-  "hf_endpoint": ${hf_endpoint_json},
-  "hf_probe_timeout_sec": 2.5,
-  "hf_hub_etag_timeout_sec": 3,
-  "hf_hub_download_timeout_sec": 30,
-  "max_inference_batch_size": ${MAX_INFERENCE_BATCH_SIZE},
-  "global_hotkey_enabled": false,
-  "global_hotkey_key": "right_alt"
-}
-EOF
-
-  {
-    echo "[Unit]"
-    echo "Description=VoiceType ASR backend"
-    echo "After=network-online.target"
-    echo
-    echo "[Service]"
-    echo "Type=simple"
-    echo "WorkingDirectory=${REPO_DIR}"
-    echo "Environment=UV_CACHE_DIR=/tmp/uv-cache"
-    if [[ -n "$HF_ENDPOINT" ]]; then
-      echo "Environment=HF_ENDPOINT=${HF_ENDPOINT}"
-    fi
-    echo "ExecStart=${UV_BIN} run voicetype serve-from-config --config-file ${runtime_config_file}"
-    echo "Restart=always"
-    echo "RestartSec=2"
-    echo
-    echo "[Install]"
-    echo "WantedBy=default.target"
-  } >"$unit_file"
-
-  systemctl --user daemon-reload
-  systemctl --user enable voicetype.service
-}
-
-install_ui_service() {
+install_controller_ui_service() {
   local user_service_dir="$HOME/.config/systemd/user"
   local unit_file="$user_service_dir/voicetype-ui.service"
   mkdir -p "$user_service_dir"
@@ -361,20 +266,6 @@ install_ui_service() {
   systemctl --user enable --now voicetype-ui.service
 }
 
-health_check() {
-  local tries=20
-  local url="http://${HOST}:${PORT}/health"
-  for _ in $(seq 1 "$tries"); do
-    if curl -fsS "$url" >/dev/null 2>&1; then
-      log "Health check passed: $url"
-      return 0
-    fi
-    sleep 1
-  done
-  log "Health check not ready yet: $url"
-  return 1
-}
-
 main() {
   detect_package_manager
   log "Detected platform: ${OS_ID} ${OS_VERSION} ($(uname -m)), package manager: ${PKG_MGR}"
@@ -402,27 +293,17 @@ main() {
     log "Addon target: ${RESOLVED_ADDON_TARGET:-none}"
   else
     log "Skipping Fcitx addon installation (--no-addon)."
-    log "You can still use Fcitx4/Fcitx5 via X11 bridge: ${UV_BIN} run voicetype fcitx-bridge --base-url http://${HOST}:${PORT}"
-  fi
-
-  if [[ "$ENABLE_SERVICE" == "1" ]]; then
-    install_user_service
-    log "ASR service installed but not auto-started. Configure in UI then click start/restart."
-  else
-    log "Skipping systemd user service setup (--no-service)."
   fi
 
   if [[ "$ENABLE_UI_SERVICE" == "1" ]]; then
-    install_ui_service
-    log "UI is running at: http://127.0.0.1:8790/ui"
+    install_controller_ui_service
+    log "Controller UI is running at: http://127.0.0.1:8790"
   else
     log "Skipping UI service setup (--no-ui-service)."
   fi
 
   log "Install complete."
-  log "Service status: systemctl --user status voicetype.service"
-  log "Manual start (ASR): systemctl --user start voicetype.service"
-  log "Manual start (UI): ${UV_BIN} run voicetype ui --host 127.0.0.1 --port 8790"
+  log "Manual start (Controller UI): systemctl --user start voicetype-ui.service"
 }
 
 main "$@"

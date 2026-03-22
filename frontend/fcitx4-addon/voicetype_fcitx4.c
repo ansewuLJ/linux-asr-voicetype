@@ -42,7 +42,7 @@ typedef struct {
 } VoiceTypeFcitx4;
 
 static const char *kDefaultHost = "127.0.0.1";
-static const int kDefaultPort = 8787;
+static const int kDefaultPort = 8789;
 static const char *kDefaultHoldKey = "ALT_R";
 static const char *kDefaultHoldModifier = "DISABLED";
 static const char *kDefaultToggleKey = "ALT_z";

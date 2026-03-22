@@ -1,0 +1,13 @@
+[Unit]
+Description=ASR OpenVINO inference service
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/code/linux-asr-voicetype
+ExecStart=%h/code/linux-asr-voicetype/scripts/start_asr_openvino.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

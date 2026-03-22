@@ -1335,6 +1335,44 @@ wheels = [
 ]
 
 [[package]]
+name = "openvino"
+version = "2026.0.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "openvino-telemetry" },
+]
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/a1/23/171d151d9ccd62cc588fcd5b28e20098a256df27e709c4fb28b2de9e6d4b/openvino-2026.0.0-20965-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:107743d5d5b8c7f5adfce67ab4a2941e6da86073eb06f77522b95597fe5d16e5" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/0f/f1/21ebfb8f496fe1732de217c6cf676299c884b2e027217d1dec08a8030d65/openvino-2026.0.0-20965-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:ba999f7fea57958a533a715afa976704ea6acf39dfd271a89ce78594e7aaa488" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/55/bb/97671885490686dfb80a6ca67daaf6d22fcb0889ef466d520d6cb3c427dc/openvino-2026.0.0-20965-cp311-cp311-manylinux_2_35_aarch64.whl", hash = "sha256:61fd7649f123aa04e90222ca30f4288a72fd100c91bea4577f464ee8e94e901c" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/c8/e2/712d8ad00e577fbf1f0081132f199a1a6885bfafd6739cc18c560ec7eee2/openvino-2026.0.0-20965-cp311-cp311-win_amd64.whl", hash = "sha256:eee912bf4370a4f454c9bcf2cfe31eda85ba6f324c85137d225edffcbc50c456" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/3b/f3/4273b37e9a7903b09f9dd6cf1907e56c00a6b95d7a7ad801b4af53598192/openvino-2026.0.0-20965-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:98426e7df6366e8a90dec93eac48a1df5c67ab18eb4b5d96ff14884e9910ade0" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/3c/f8/bd25df6ebd42b2425a2d5fe504389e941adbee41356078a97357469d18cb/openvino-2026.0.0-20965-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:4ad9cbf77ed954b64b056cb91ebb95e5691da1c86238e610b565e5347e73a5c5" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/d9/6f/570781f36cc270cc573904a2cf1206fdb7329774918eac10f78a264cd855/openvino-2026.0.0-20965-cp312-cp312-manylinux_2_35_aarch64.whl", hash = "sha256:dbf31cc6a29611b0b3e957f51468f5640195b1087d1d875f4c9f03adef24c2cb" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/30/ed/dd3886bdfd822bb1671c0f892a007a9e27a7fa1f97ea1a7c0c8e901a137c/openvino-2026.0.0-20965-cp312-cp312-win_amd64.whl", hash = "sha256:10af8a90373547c5dec2b53c60dac38a7a29df8662fe097a3c6c67750e7c88c6" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/6e/76/0b42c62e29b0100425c8cb1577dec8368ccb5def889b136c4bf0d954a89a/openvino-2026.0.0-20965-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:830b42adb5c1ef57c0d7de2e72943f7186783046b0b3b62128f0f6b4bc507fad" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/71/3f/95b15760d7ae4b7dfefdbadeccae9604985d4335b221350e1bb04701a158/openvino-2026.0.0-20965-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:452902e4b8fba526e8740622cd5638c457d3ae44da7b39e6d4ef7919be0e95d4" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/9b/ee/73c6866929bfbdb67a0b611358539758aa2970c14a01f3e5fcb2b7caa65b/openvino-2026.0.0-20965-cp313-cp313-manylinux_2_35_aarch64.whl", hash = "sha256:01b963e6eefcfb00e10831a8b5dc14e158e3ed49ae403a64dedd4037c81e9264" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/d4/26/82d326f3769c9e5c17d34ef10dd0aff4a94a3b550e1d2efe977e5754b84e/openvino-2026.0.0-20965-cp313-cp313-win_amd64.whl", hash = "sha256:14069e5af2ac8a77f6ea55d7020d34cc7d3538d49ebda91a18c00d4da830ab58" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/7f/0c/26a4efd110f4cef5830c60e8c4cce1aad796526e01af32013297f944bb2d/openvino-2026.0.0-20965-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:f4ef8ddaece0d0815ec7aa6b41390c23551b5a51572cdd46e0136558b2e2d489" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/fe/8e/52df01e8687f4711259729433226219c6839a0495988ddeb7e27af59aba8/openvino-2026.0.0-20965-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:79ce4b5d7f3a7f84de878752d97620b84e0c4a8ee550fb3bca9fc36fe5669450" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/f7/a8/bc8e75d3f75ee2529a12be9522f52a8d0e5614f24c00f95a20b69f587d3c/openvino-2026.0.0-20965-cp314-cp314-win_amd64.whl", hash = "sha256:6d33440d290e67836825418134ecf9e17f150d50d3d9c07cf481997f5b1f0e6d" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/2c/f1/4c0278d333269fff90ee2b9a46ee2c90de4768030393b3d1f079aadb56f7/openvino-2026.0.0-20965-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:b0b8c48d8b033e89a304e0305b2789557793445483d3f86b22a1e177a3da7b2d" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/a8/06/1a2caa07bfcb4e057048b8d5515a7aff35a2aa53ab5379762c1685cbeacc/openvino-2026.0.0-20965-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:8cbe36e0dacd8676eb69c9a4b564fa430d784f6e2b0e18e7ebc363599256c184" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/2c/dd/6a05a399d90ad4e8b15e0d5a4dd7de90c10484cb1585bd65e7e69e779762/openvino-2026.0.0-20965-cp314-cp314t-win_amd64.whl", hash = "sha256:a9e5524322c42f6a1283148fb70085aba8640a7d3067ede896085abbff5e33fe" },
+]
+
+[[package]]
+name = "openvino-telemetry"
+version = "2025.2.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/71/8a/89d82f1a9d913fb266c2e6dc2f6030935db24b7152963a8db6c4f039787f/openvino_telemetry-2025.2.0.tar.gz", hash = "sha256:8bf8127218e51e99547bf38b8fb85a8b31c9bf96e6f3a82eb0b3b6a34155977c" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/3b/ac/5ab0ca0aa269ad3c73f7bfc3801b10e5f56f75a31bf68c1ae8bd51cf70a4/openvino_telemetry-2025.2.0-py3-none-any.whl", hash = "sha256:bcb667e83a44f202ecf4cfa49281715c6d7e21499daec04ff853b7f964833599" },
+]
+
+[[package]]
 name = "orjson"
 version = "3.11.7"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
@@ -2613,6 +2651,7 @@ dependencies = [
     { name = "httpx" },
     { name = "huggingface-hub" },
     { name = "numpy" },
+    { name = "openvino" },
     { name = "pydantic" },
     { name = "soundfile" },
     { name = "typer" },
@@ -2622,6 +2661,7 @@ dependencies = [
 [package.optional-dependencies]
 asr = [
     { name = "qwen-asr" },
+    { name = "tokenizers" },
     { name = "torch" },
     { name = "transformers" },
 ]
@@ -2632,9 +2672,11 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "huggingface-hub", specifier = ">=0.36.0" },
     { name = "numpy", specifier = ">=2.1.0" },
+    { name = "openvino", specifier = ">=2025.4.0" },
     { name = "pydantic", specifier = ">=2.11.0" },
     { name = "qwen-asr", marker = "extra == 'asr'", specifier = ">=0.0.6" },
     { name = "soundfile", specifier = ">=0.13.1" },
+    { name = "tokenizers", marker = "extra == 'asr'", specifier = ">=0.21.0" },
     { name = "torch", marker = "extra == 'asr'", specifier = ">=2.8.0" },
     { name = "transformers", marker = "extra == 'asr'", specifier = ">=4.56.0" },
     { name = "typer", specifier = ">=0.16.0" },

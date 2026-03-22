@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 class AppConfig(BaseModel):
     host: str = "127.0.0.1"
-    port: int = 8787
+    port: int = 8789
     model: str = "Qwen/Qwen3-ASR-0.6B"
     device: str = "cuda:0"
     backend: str = "transformers"

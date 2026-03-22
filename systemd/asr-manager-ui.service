@@ -1,0 +1,13 @@
+[Unit]
+Description=ASR service manager UI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/code/linux-asr-voicetype
+ExecStart=%h/code/linux-asr-voicetype/scripts/start_asr_manager_ui.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

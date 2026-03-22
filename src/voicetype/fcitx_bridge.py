@@ -13,7 +13,7 @@ import httpx
 
 @dataclass(frozen=True)
 class BridgeConfig:
-    base_url: str = "http://127.0.0.1:8787"
+    base_url: str = "http://127.0.0.1:8789"
     hold_key: str = "right_alt"
     toggle_key: str = "left_alt+z"
     sample_rate: int = 16000

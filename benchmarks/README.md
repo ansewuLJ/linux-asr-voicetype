@@ -20,7 +20,7 @@ arecord -f S16_LE -c 1 -r 16000 -t wav /home/lijie/data/asr_bench_audio/test_01.
 ## 2) Start service
 
 ```bash
-systemctl --user restart voicetype.service
+systemctl --user restart asr-transformers.service
 ```
 
 ## 3) Run benchmark
@@ -29,7 +29,7 @@ systemctl --user restart voicetype.service
 cd /home/lijie/code/linux-asr-voicetype
 uv run python benchmarks/bench_transcribe.py \
   --audio-dir /home/lijie/data/asr_bench_audio \
-  --base-url http://127.0.0.1:8787 \
+  --base-url http://127.0.0.1:8789 \
   --warmup 1 \
   --repeat 5 \
   --output-json /tmp/voicetype-bench.json
@@ -52,7 +52,7 @@ Use the same machine + same wav set + same repeat count for fair comparison.
 cd /home/lijie/code/linux-asr-voicetype
 uv run python benchmarks/bench_transcribe.py \
   --audio-dir /home/lijie/code/audio \
-  --base-url http://127.0.0.1:8787 \
+  --base-url http://127.0.0.1:8789 \
   --warmup 1 \
   --repeat 5 \
   --output-json /home/lijie/code/audio-bench-results/trans_gpu.json
@@ -62,7 +62,7 @@ uv run python benchmarks/bench_transcribe.py \
 cd /home/lijie/code/linux-asr-voicetype
 uv run python benchmarks/bench_transcribe.py \
   --audio-dir /home/lijie/code/audio \
-  --base-url http://127.0.0.1:8787 \
+  --base-url http://127.0.0.1:8789 \
   --warmup 1 \
   --repeat 5 \
   --output-json /home/lijie/code/audio-bench-results/trans_cpu_retry.json

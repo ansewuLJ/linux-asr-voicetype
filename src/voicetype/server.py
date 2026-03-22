@@ -7,7 +7,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, HTTPException
 
-from .asr_backend import QwenEngine
+from .asr_backend import AsrEngine
 from .audio import decode_base64_wav, load_wav_file
 from .config import AppConfig, asr_log_file_path
 from .hotwords import Hotwords, count_hotwords, merge_hotwords, parse_hotwords_text
@@ -62,7 +62,7 @@ def create_app(config: AppConfig) -> FastAPI:
     _setup_asr_file_logging(config.log_level)
 
     app = FastAPI(title="VoiceType", version="0.1.0")
-    engine = QwenEngine(config)
+    engine = AsrEngine(config)
     sessions = SessionManager(max_seconds=config.max_session_seconds)
     recorder = ArecordManager()
     hotwords: Hotwords = {}
@@ -188,7 +188,7 @@ def create_app(config: AppConfig) -> FastAPI:
                 "hf_endpoint": req.hf_endpoint,
             }
         )
-        new_engine = QwenEngine(new_config)
+        new_engine = AsrEngine(new_config)
         try:
             new_engine.load()
         except Exception as exc:  # noqa: BLE001
@@ -244,7 +244,12 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.post("/v1/ui/service/restart")
     def ui_restart_service() -> dict[str, object]:
-        cmd = ["systemctl", "--user", "restart", "voicetype.service"]
+        service_name = (
+            "asr-openvino.service"
+            if str(config.backend).strip().lower() == "openvino"
+            else "asr-transformers.service"
+        )
+        cmd = ["systemctl", "--user", "restart", service_name]
         try:
             proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
         except Exception as exc:  # noqa: BLE001

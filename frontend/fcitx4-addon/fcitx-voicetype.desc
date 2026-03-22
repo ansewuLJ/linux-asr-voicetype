@@ -6,7 +6,7 @@ LongDescription=需要与UI配置完全相同。通常保持 127.0.0.1。
 
 [VoiceType/Port]
 Type=Integer
-DefaultValue=8787
+DefaultValue=8789
 Min=1
 Max=65535
 Description=ASR Port
