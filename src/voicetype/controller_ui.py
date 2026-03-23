@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from .audio import encode_pcm16_wav_base64, load_wav_file
 from .config import (
     AppConfig,
     asr_log_file_path,
@@ -18,6 +19,8 @@ from .config import (
     save_runtime_config,
     ui_log_file_path,
 )
+from .recorder import ArecordManager
+from .schema import RecordingStartRequest
 
 ASR_TRANSFORMERS_SERVICE = "asr-transformers.service"
 ASR_OPENVINO_SERVICE = "asr-openvino.service"
@@ -693,6 +696,7 @@ def create_controller_app(config_file: Path) -> FastAPI:
     app = FastAPI(title="VoiceType Controller", version="0.1.0")
     _setup_ui_file_logging()
     logger = logging.getLogger("voicetype.controller")
+    recorder = ArecordManager()
 
     def _asr_base_url() -> str:
         cfg = load_runtime_config(config_file)
@@ -709,6 +713,22 @@ def create_controller_app(config_file: Path) -> FastAPI:
             return False, str(exc)
 
     def _asr_request(method: str, path: str, payload: dict[str, object] | None = None) -> dict[str, object]:
+        # Keep recording on the local input machine, then forward audio to remote ASR.
+        if method.upper() == "POST" and path == "/v1/recording/start":
+            sample_rate = 16000
+            language = "zh"
+            if payload:
+                if isinstance(payload.get("sample_rate"), int):
+                    sample_rate = int(payload["sample_rate"])
+                if isinstance(payload.get("language"), str):
+                    language = str(payload["language"]).strip() or "zh"
+            return _local_recording_start(sample_rate=sample_rate, language=language)
+        if method.upper() == "POST" and path == "/v1/recording/stop":
+            language = "zh"
+            if payload and isinstance(payload.get("language"), str):
+                language = str(payload["language"]).strip() or "zh"
+            return _local_recording_stop_and_transcribe(language=language)
+
         url = f"{_asr_base_url()}{path}"
         try:
             with httpx.Client(timeout=20.0) as client:
@@ -723,6 +743,32 @@ def create_controller_app(config_file: Path) -> FastAPI:
             detail = data.get("detail") if isinstance(data, dict) else None
             raise HTTPException(status_code=resp.status_code, detail=detail or str(data))
         return data if isinstance(data, dict) else {"data": data}
+
+    def _local_recording_start(sample_rate: int = 16000, language: str = "zh") -> dict[str, object]:
+        try:
+            recorder.start(sample_rate=sample_rate, language=language)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"local recording start failed: {exc}") from exc
+        return {"success": True, "recording": True, "sample_rate": sample_rate}
+
+    def _local_recording_stop_and_transcribe(language: str = "zh") -> dict[str, object]:
+        try:
+            wav_path, default_lang, sample_rate = recorder.stop()
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"local recording stop failed: {exc}") from exc
+
+        try:
+            samples = load_wav_file(wav_path, expected_sample_rate=sample_rate)
+            audio_b64 = encode_pcm16_wav_base64(samples, sample_rate=sample_rate)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"local wav load failed: {exc}") from exc
+
+        req = {
+            "audio_base64": audio_b64,
+            "sample_rate": sample_rate,
+            "language": (language or default_lang or "zh"),
+        }
+        return _asr_request("POST", "/v1/transcribe", req)
 
     hotkey_bridge = X11GlobalHotkeyBridge(_asr_request, logger)
 
@@ -800,6 +846,21 @@ def create_controller_app(config_file: Path) -> FastAPI:
         base_url = _asr_base_url()
         ok, err = _check_health(base_url)
         return {"base_url": base_url, "health_ok": ok, "health_error": err}
+
+    @app.post("/v1/recording/start")
+    def local_recording_start(req: RecordingStartRequest) -> dict[str, object]:
+        # Compatibility endpoint for fcitx4/fcitx5 addon and global hotkey bridge.
+        # Recording always happens on this local machine (input side).
+        return _local_recording_start(sample_rate=req.sample_rate, language=req.language)
+
+    @app.post("/v1/recording/stop")
+    def local_recording_stop(req: dict[str, object] | None = None) -> dict[str, object]:
+        # Compatibility endpoint for fcitx4/fcitx5 addon and global hotkey bridge.
+        # Stop local recording and forward audio to remote ASR /v1/transcribe.
+        language = "zh"
+        if req and isinstance(req.get("language"), str):
+            language = str(req["language"]).strip() or "zh"
+        return _local_recording_stop_and_transcribe(language=language)
 
     @app.post("/api/connect-config")
     def connect_config(req: ConnectConfigRequest) -> dict[str, object]:

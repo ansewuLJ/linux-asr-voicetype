@@ -67,8 +67,8 @@ bash scripts/start_infer_service.sh --ui-host 127.0.0.1 --ui-port 8788
 1. 打开 `fcitx5-configtool`。
 2. 进入“附加组件”，找到 `VoiceType`（或 `VoiceType 语音输入`），确保已启用。
 3. 打开该组件配置，填写：
-   - `ASR Host`：推理服务 host（单机一般是 `127.0.0.1`，双机填推理机 IP）
-   - `ASR Port`：推理服务 port（默认 `8789`）
+   - `ASR Host`：最终接入 UI 主机（一般是本机 `127.0.0.1`）
+   - `ASR Port`：最终接入 UI 端口（默认 `8790`）
    - `Hold-To-Talk Key` / `Toggle Recording Key`：按你的习惯设置热键
 4. 应用配置后执行：
 
@@ -81,8 +81,8 @@ fcitx5 -r
 1. 打开 `fcitx-configtool`。
 2. 进入“附加组件”，找到 `VoiceType`，确保已启用。
 3. 在 VoiceType 配置里填写：
-   - `ASR Host`：推理服务 host
-   - `ASR Port`：推理服务 port（默认 `8789`）
+   - `ASR Host`：最终接入 UI 主机（一般是本机 `127.0.0.1`）
+   - `ASR Port`：最终接入 UI 端口（默认 `8790`）
    - `HoldKey` / `ToggleKey`：设置录音热键
 4. 应用配置后执行：
 
@@ -143,6 +143,10 @@ bash scripts/start_infer_service.sh --ui-host 0.0.0.0 --ui-port 8788
 5) 回到 A 机最终接入 UI（`8790`）里填写：
 - host: `<B机IP>`
 - port: `8789`
+
+6) A 机上的 Fcitx4/Fcitx5 插件请配置到本机最终接入 UI：
+- host: `127.0.0.1`
+- port: `8790`
 
 ## 三、常用 systemd 命令
 
