@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Local model artifacts (do not commit large runtime model files)
+models/
