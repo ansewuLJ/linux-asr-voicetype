@@ -32,8 +32,8 @@ bash scripts/download_hf_model.sh
 ```
 
 说明：
-- OpenVINO 运行时还需要 `prompt_template.json` 与 `mel_filters.npy`。
-- 若下载模型后缺少这两个文件，请在本仓库生成：
+- 使用该 OpenVINO 模型仓库时，这两个文件默认不随模型一起提供。
+- 因此只要走 OpenVINO 这条流程，就必须先在模型目录生成 `prompt_template.json` 和 `mel_filters.npy`：
 
 ```bash
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
@@ -146,7 +146,7 @@ REPO_ID=dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO bash scripts/download_hf_mode
 REPO_ID=Qwen/Qwen3-ASR-0.6B bash scripts/download_hf_model.sh
 ```
 
-若使用 OpenVINO，模型目录缺少 `prompt_template.json` / `mel_filters.npy` 时，请手动执行：
+只要使用 OpenVINO，这一步就是必做项：必须先在模型目录生成 `prompt_template.json` 和 `mel_filters.npy`：
 
 ```bash
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
