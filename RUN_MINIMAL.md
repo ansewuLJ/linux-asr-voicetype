@@ -9,7 +9,7 @@ cd linux-asr-voicetype
 REPO_ID=dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO \
 bash scripts/download_hf_model.sh
 
-# 说明：只要使用 OpenVINO，这一步是必做项，必须先生成 prompt_template.json / mel_filters.npy
+# 说明：OpenVINO 必做：先生成 prompt_template.json / mel_filters.npy
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
 uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
 
