@@ -71,11 +71,17 @@ def create_app(config: AppConfig) -> FastAPI:
     if config.hotwords_file:
         hotwords = parse_hotwords_text(Path(config.hotwords_file))
 
+    def normalize_hotwords_input(hw: Hotwords) -> Hotwords:
+        normalized: Hotwords = {}
+        for category, words in hw.items():
+            normalized[category] = {word: 1.0 for word in words.keys()}
+        return normalized
+
     def export_hotwords_text(hw: Hotwords) -> str:
         lines: list[str] = []
         for _, words in hw.items():
-            for word, weight in words.items():
-                lines.append(f"{word} {weight:g}")
+            for word in words.keys():
+                lines.append(word)
         return "\n".join(lines)
 
     @app.on_event("startup")
@@ -146,7 +152,8 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.post("/v1/hotwords/load")
     def load_hotwords(req: LoadHotwordsRequest) -> dict[str, object]:
         nonlocal hotwords
-        hotwords = merge_hotwords(hotwords, req.hotwords) if req.merge else req.hotwords
+        incoming = normalize_hotwords_input(req.hotwords)
+        hotwords = merge_hotwords(hotwords, incoming) if req.merge else incoming
         return {
             "success": True,
             "hotwords_count": count_hotwords(hotwords),
@@ -222,17 +229,10 @@ def create_app(config: AppConfig) -> FastAPI:
             if not line or line.startswith("#"):
                 continue
             parts = line.split()
-            word = parts[0]
-            weight = 30.0
-            if len(parts) > 1:
-                try:
-                    weight = float(parts[1])
-                except ValueError as exc:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"invalid weight in line: {line}",
-                    ) from exc
-            parsed["custom"][word] = weight
+            if not parts:
+                continue
+            # Weight is intentionally ignored (not consumed by ASR backend).
+            parsed["custom"][parts[0]] = 1.0
 
         hotwords = parsed
         return {

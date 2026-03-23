@@ -33,16 +33,12 @@ bash scripts/download_hf_model.sh
 
 说明：
 - OpenVINO 运行时还需要 `prompt_template.json` 与 `mel_filters.npy`。
-- 若下载模型后缺少这两个文件，请手动复制：
+- 若下载模型后缺少这两个文件，请在本仓库生成：
 
 ```bash
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
-cp assets/openvino_minitool/prompt_template.json "$MODEL_DIR/prompt_template.json"
-cp assets/openvino_minitool/mel_filters.npy "$MODEL_DIR/mel_filters.npy"
+uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
 ```
-
-- 这两个文件的来源与用途说明见：`assets/openvino_minitool/README.md`
-- 这两个文件参考自第三方项目 `QwenASRMiniTool`；分发前请确认其许可证与模型许可证合规。
 
 Transformers（CPU/GPU）：
 
@@ -154,11 +150,8 @@ REPO_ID=Qwen/Qwen3-ASR-0.6B bash scripts/download_hf_model.sh
 
 ```bash
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
-cp assets/openvino_minitool/prompt_template.json "$MODEL_DIR/prompt_template.json"
-cp assets/openvino_minitool/mel_filters.npy "$MODEL_DIR/mel_filters.npy"
+uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
 ```
-
-注意：上述两个文件来自第三方参考项目（见 `assets/openvino_minitool/README.md`），请在对外发布时检查许可证要求。
 
 3) 启动推理侧：
 
@@ -190,3 +183,8 @@ systemctl --user stop asr-openvino.service
 systemctl --user stop asr-manager-ui.service
 systemctl --user stop voicetype-ui.service
 ```
+
+## 致谢
+
+- 本仓库 OpenVINO 处理链路参考了 `QwenASRMiniTool` 项目（包括 `processor_numpy.py` 思路与 `generate_prompt_template.py` 生成流程）：
+  `https://github.com/dseditor/QwenASRMiniTool.git`

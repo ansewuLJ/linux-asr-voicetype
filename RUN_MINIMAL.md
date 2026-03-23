@@ -9,10 +9,9 @@ cd linux-asr-voicetype
 REPO_ID=dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO \
 bash scripts/download_hf_model.sh
 
-# 说明：若模型目录缺少 prompt_template.json / mel_filters.npy，手动复制
+# 说明：若模型目录缺少 prompt_template.json / mel_filters.npy，请先生成
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
-cp assets/openvino_minitool/prompt_template.json "$MODEL_DIR/prompt_template.json"
-cp assets/openvino_minitool/mel_filters.npy "$MODEL_DIR/mel_filters.npy"
+uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
 
 # 一键拉起推理服务管理 UI（不会自动启动推理）
 bash scripts/start_infer_service.sh --ui-host 127.0.0.1 --ui-port 8788

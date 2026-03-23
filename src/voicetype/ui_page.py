@@ -70,10 +70,10 @@ def render_ui() -> str:
 
       <section class="card">
         <h2>热词维护</h2>
-        <label>热词输入（每行一个词，格式：词 或 词 权重）</label>
-        <textarea id="hotwordsText" class="mono">pytorch 50
-centos 20
-VoiceType 40</textarea>
+        <label>热词输入（每行一个词）</label>
+        <textarea id="hotwordsText" class="mono">pytorch
+centos
+VoiceType</textarea>
         <div class="row">
           <div>
             <label>合并模式</label>

@@ -495,10 +495,10 @@ def render_controller_ui() -> str:
 
       <section class="card card-hotwords">
         <h2>热词维护</h2>
-        <div class="status">说明：热词用于提升专有名词/术语（如人名、地名、项目名）的识别命中率，减少错字。你新增或修改词表后，点击“加载输入框热词”或“从文件加载热词”即可立刻生效。</div>
-        <label>输入框热词（每行：词 或 词 权重）</label>
-        <textarea id="hotText">pytorch 50
-centos 20</textarea>
+        <div class="status">说明：热词用于提升专有名词和术语的识别准确率，减少错别字。新增或修改词表后，点击“加载输入框热词”或“从文件加载热词”即可生效。</div>
+        <label>输入框热词（每行一个词）</label>
+        <textarea id="hotText">pytorch
+centos</textarea>
         <label>热词文件路径</label>
         <input id="hotFile" placeholder="/path/to/hotwords.txt" />
         <div class="btns">

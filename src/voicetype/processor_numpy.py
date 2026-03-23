@@ -3,6 +3,11 @@ processor_numpy.py
 ─────────────────────────────────────────────────────────────────────
 純 numpy 實作 Qwen3-ASR Processor，完整取代 torch / transformers / qwen_asr。
 
+來源聲明：
+- 本檔案直接複製自上游專案 `QwenASRMiniTool` 的 `processor_numpy.py`
+- 上游地址： https://github.com/dseditor/QwenASRMiniTool.git
+- 本檔案內容目前保持與上游一致（未做內容改寫）
+
 功能：
   • Mel 特徵提取  ─ 與 WhisperFeatureExtractor 完全對齊
   • BPE 解碼      ─ byte-level GPT-2 風格，從 vocab.json 讀取

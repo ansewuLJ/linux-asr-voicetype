@@ -6,7 +6,7 @@ import numpy as np
 
 from ..asr_types import AsrResult
 from ..config import AppConfig
-from ..processor_numpy_minitool import LightProcessor
+from ..processor_numpy import LightProcessor
 
 
 class OpenVinoBackend:

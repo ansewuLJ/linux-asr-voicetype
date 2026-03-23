@@ -16,15 +16,11 @@ def parse_hotwords_text(path: Path) -> Hotwords:
             if not line or line.startswith("#"):
                 continue
             parts = line.split()
-            if len(parts) == 1:
-                result["default"][parts[0]] = 1.3
+            if not parts:
                 continue
-            word = parts[0]
-            try:
-                weight = float(parts[1])
-            except ValueError:
-                weight = 1.3
-            result["default"][word] = weight
+            # Weight is not used by runtime inference; keep backward compatibility
+            # by accepting old "word weight" lines and ignoring the weight token.
+            result["default"][parts[0]] = 1.0
     return result
 
 
