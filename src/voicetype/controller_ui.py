@@ -15,6 +15,7 @@ from .audio import encode_pcm16_wav_base64, load_wav_file
 from .config import (
     AppConfig,
     asr_log_file_path,
+    DEFAULT_POSTPROCESS_SYSTEM_PROMPT,
     load_runtime_config,
     save_runtime_config,
     ui_log_file_path,
@@ -30,6 +31,8 @@ MANAGED_ASR_SERVICES = {
     ASR_OPENVINO_SERVICE,
     ASR_MANAGER_UI_SERVICE,
 }
+
+POSTPROCESS_SYSTEM_PROMPT = DEFAULT_POSTPROCESS_SYSTEM_PROMPT
 
 
 class RuntimeConfigUpdateRequest(BaseModel):
@@ -57,6 +60,21 @@ class HotwordsFileRequest(BaseModel):
 class HotkeyConfigRequest(BaseModel):
     enabled: bool
     hotkey: str = "right_alt"
+
+
+class PostprocessConfigRequest(BaseModel):
+    enabled: bool = False
+    base_url: str = ""
+    model: str = ""
+    api_key: str = ""
+    system_prompt: str = POSTPROCESS_SYSTEM_PROMPT
+
+
+class PostprocessTestRequest(BaseModel):
+    base_url: str = ""
+    model: str = ""
+    api_key: str = ""
+    text: str = "连接测试"
 
 
 class X11GlobalHotkeyBridge:
@@ -373,9 +391,10 @@ def render_controller_ui() -> str:
     body { margin:0; min-height:100vh; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; background:linear-gradient(160deg,var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%); color:var(--txt); }
     .wrap { max-width: 980px; margin: 28px auto; padding: 0 14px 24px; }
     .grid { display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
-    .layout { display:grid; grid-template-columns: 1fr 1fr; grid-template-areas: "connect hotwords" "hotkey hotwords"; gap:14px; align-items:stretch; }
+    .layout { display:grid; grid-template-columns: 1fr 1fr; grid-template-areas: "connect hotwords" "hotkey hotwords" "postprocess hotwords"; gap:14px; align-items:stretch; }
     .card-connect { grid-area: connect; }
     .card-hotkey { grid-area: hotkey; }
+    .card-postprocess { grid-area: postprocess; }
     .card-hotwords { grid-area: hotwords; }
     .card { border:1px solid var(--line); background:var(--card); border-radius: 14px; padding:14px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06); }
     h1 { margin:0 0 16px; }
@@ -383,6 +402,13 @@ def render_controller_ui() -> str:
     label { display:block; font-size:13px; color:var(--muted); margin:10px 0 6px; }
     input, select, textarea { width:100%; border:1px solid #c6d0df; background:#ffffff; color:#1f2937; border-radius:10px; padding:10px; font-size:14px; }
     textarea { min-height: 140px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    .input-with-action { display:flex; align-items:center; gap:8px; }
+    .input-with-action input { flex:1; }
+    .icon-btn { width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center; border:1px solid #c6d0df; background:#f8fafc; color:#334155; border-radius:10px; cursor:pointer; }
+    .icon-btn svg { width:18px; height:18px; }
+    details.advanced { margin-top: 10px; border: 1px dashed #c6d0df; border-radius: 10px; background: #f8fafc; padding: 8px 10px; }
+    details.advanced summary { cursor: pointer; color: #475569; font-size: 13px; user-select: none; }
+    details.advanced[open] summary { margin-bottom: 8px; }
     .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
     button { border:1px solid #c6d0df; background:#f8fafc; color:#1f2937; border-radius:10px; padding:9px 12px; cursor:pointer; }
     button.primary { background:#2563eb; border-color:#2563eb; color:#ffffff; }
@@ -390,7 +416,7 @@ def render_controller_ui() -> str:
     .ok { color:#059669; } .bad { color:#dc2626; }
     @media (max-width: 860px) {
       .grid { grid-template-columns: 1fr; }
-      .layout { grid-template-columns: 1fr; grid-template-areas: "connect" "hotkey" "hotwords"; }
+      .layout { grid-template-columns: 1fr; grid-template-areas: "connect" "hotkey" "postprocess" "hotwords"; }
     }
   </style>
 </head>
@@ -434,6 +460,39 @@ def render_controller_ui() -> str:
         <div id="hotkeyStatus" class="status"></div>
       </section>
 
+      <section class="card card-postprocess">
+        <h2>文本后处理（可选）</h2>
+        <div class="status">说明：转写结果可再经文本模型清洗。关闭时保持原始 ASR 文本；开启后失败会自动回退原文。</div>
+        <label style="display:flex;align-items:center;gap:8px;">
+          <input id="ppEnabled" type="checkbox" style="width:auto;" />
+          启用后处理
+        </label>
+        <label>Base URL</label>
+        <input id="ppBaseUrl" placeholder="https://api.openai.com/v1" />
+        <label>API Key</label>
+        <div class="input-with-action">
+          <input id="ppApiKey" type="password" />
+          <button id="togglePpApiKey" class="icon-btn" type="button" aria-label="显示或隐藏 API Key" title="显示/隐藏 API Key">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+        <label>Model</label>
+        <input id="ppModel" />
+        <details class="advanced">
+          <summary>高级选项</summary>
+          <label>系统提示词</label>
+          <textarea id="ppSystemPrompt" style="min-height: 120px;"></textarea>
+        </details>
+        <div class="btns">
+          <button id="testPostprocess">测试连接</button>
+          <button class="primary" id="savePostprocess">保存配置</button>
+        </div>
+        <div id="ppStatus" class="status"></div>
+      </section>
+
       <section class="card card-hotwords">
         <h2>热词维护</h2>
         <div class="status">说明：热词用于提升专有名词/术语（如人名、地名、项目名）的识别命中率，减少错字。你新增或修改词表后，点击“加载输入框热词”或“从文件加载热词”即可立刻生效。</div>
@@ -459,11 +518,20 @@ centos 20</textarea>
     const hotkeyEnabled = document.getElementById('hotkeyEnabled');
     const hotkeyKey = document.getElementById('hotkeyKey');
     const saveHotkey = document.getElementById('saveHotkey');
+    const ppEnabled = document.getElementById('ppEnabled');
+    const ppBaseUrl = document.getElementById('ppBaseUrl');
+    const ppModel = document.getElementById('ppModel');
+    const ppApiKey = document.getElementById('ppApiKey');
+    const ppSystemPrompt = document.getElementById('ppSystemPrompt');
+    const togglePpApiKey = document.getElementById('togglePpApiKey');
+    const savePostprocess = document.getElementById('savePostprocess');
+    const testPostprocess = document.getElementById('testPostprocess');
     const hotText = document.getElementById('hotText');
     const hotFile = document.getElementById('hotFile');
     const loadHotText = document.getElementById('loadHotText');
     const loadHotFile = document.getElementById('loadHotFile');
     const clearHot = document.getElementById('clearHot');
+    let ppConnectionVerified = false;
 
     async function req(url, opt) {
       const r = await fetch(url, opt);
@@ -488,6 +556,18 @@ centos 20</textarea>
       localStorage.setItem("voicetype.hotword_file_path", hotFile.value || "");
     }
 
+    function readPostprocessApiKeyCache() {
+      return localStorage.getItem("voicetype.postprocess_api_key_cache") || '';
+    }
+
+    function writePostprocessApiKeyCache(value) {
+      if (value) localStorage.setItem("voicetype.postprocess_api_key_cache", value);
+    }
+
+    function clearPostprocessApiKeyCache() {
+      localStorage.removeItem("voicetype.postprocess_api_key_cache");
+    }
+
     async function refreshState() {
       const s = await req('/api/state');
       const c = s.config;
@@ -495,8 +575,27 @@ centos 20</textarea>
       port.value = c.port || 8789;
       hotkeyEnabled.checked = !!c.global_hotkey_enabled;
       hotkeyKey.value = c.global_hotkey_key || 'right_alt';
+      ppEnabled.checked = !!c.postprocess_enabled;
+      ppBaseUrl.value = c.postprocess_base_url || '';
+      ppModel.value = c.postprocess_model || '';
+      ppSystemPrompt.value = c.postprocess_system_prompt || '';
+      if (s.postprocess_api_key_set) {
+        ppApiKey.value = readPostprocessApiKeyCache();
+      } else {
+        ppApiKey.value = '';
+        clearPostprocessApiKeyCache();
+      }
+      ppApiKey.type = 'password';
+      togglePpApiKey.setAttribute('title', '显示 API Key');
+      togglePpApiKey.setAttribute('aria-label', '显示 API Key');
+      ppConnectionVerified = !!c.postprocess_enabled;
       await refreshHotkeyState();
       await refreshConnectHealth();
+      setStatus('ppStatus', s.postprocess_api_key_set ? '后处理API Key：已配置' : '后处理API Key：未配置', true);
+    }
+
+    function markPostprocessDirty() {
+      ppConnectionVerified = false;
     }
 
     function connectStatusText(ok, err='') {
@@ -554,6 +653,70 @@ centos 20</textarea>
       } catch (e) {
         setStatus('hotkeyStatus', String(e), false);
       }
+    });
+
+    savePostprocess.addEventListener('click', async () => {
+      try {
+        if (ppEnabled.checked && !ppConnectionVerified) {
+          throw new Error('请先测试连接，连接通过后才能启用。');
+        }
+        const body = {
+          enabled: !!ppEnabled.checked,
+          base_url: ppBaseUrl.value || '',
+          model: ppModel.value || '',
+          api_key: ppApiKey.value || '',
+          system_prompt: ppSystemPrompt.value || ''
+        };
+        const out = await req('/api/postprocess/config', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(body)
+        });
+        if (ppApiKey.value) {
+          writePostprocessApiKeyCache(ppApiKey.value);
+        } else if (!out.api_key_set) {
+          clearPostprocessApiKeyCache();
+        }
+        setStatus('ppStatus', '配置已保存\\n' + (out.enabled ? '后处理：已启用' : '后处理：未启用') + '\\n' + (out.api_key_set ? 'API Key: 已配置' : 'API Key: 未配置'), true);
+      } catch (e) {
+        setStatus('ppStatus', String(e), false);
+      }
+    });
+
+    testPostprocess.addEventListener('click', async () => {
+      try {
+        const out = await req('/api/postprocess/test', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            base_url: ppBaseUrl.value || '',
+            model: ppModel.value || '',
+            api_key: ppApiKey.value || '',
+            text: '连接测试'
+          })
+        });
+        ppConnectionVerified = true;
+        setStatus('ppStatus', '连接测试通过，可以启用并保存。', true);
+      } catch (e) {
+        ppConnectionVerified = false;
+        setStatus('ppStatus', String(e), false);
+      }
+    });
+
+    ppBaseUrl.addEventListener('input', markPostprocessDirty);
+    ppModel.addEventListener('input', markPostprocessDirty);
+    ppApiKey.addEventListener('input', markPostprocessDirty);
+    ppSystemPrompt.addEventListener('input', markPostprocessDirty);
+    ppEnabled.addEventListener('change', () => {
+      if (ppEnabled.checked && !ppConnectionVerified) {
+        setStatus('ppStatus', '请先测试连接，连接通过后再启用。', false);
+      }
+    });
+    togglePpApiKey.addEventListener('click', () => {
+      const show = ppApiKey.type === 'password';
+      ppApiKey.type = show ? 'text' : 'password';
+      togglePpApiKey.setAttribute('title', show ? '隐藏 API Key' : '显示 API Key');
+      togglePpApiKey.setAttribute('aria-label', show ? '隐藏 API Key' : '显示 API Key');
     });
 
     loadHotText.addEventListener('click', async () => {
@@ -712,6 +875,114 @@ def create_controller_app(config_file: Path) -> FastAPI:
         except Exception as exc:  # noqa: BLE001
             return False, str(exc)
 
+    def _extract_postprocess_text(resp_json: dict[str, object]) -> str:
+        choices = resp_json.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise ValueError("invalid response: missing choices")
+        first = choices[0]
+        if not isinstance(first, dict):
+            raise ValueError("invalid response: invalid choice")
+        message = first.get("message")
+        if not isinstance(message, dict):
+            raise ValueError("invalid response: missing message")
+        content = message.get("content")
+        if isinstance(content, str):
+            return content.strip()
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, dict) and isinstance(item.get("text"), str):
+                    parts.append(str(item["text"]))
+            return "".join(parts).strip()
+        raise ValueError("invalid response: missing content")
+
+    def _postprocess_connectivity_check(base_url: str, model: str, api_key: str) -> str:
+        url = f"{base_url.rstrip('/')}/chat/completions"
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 1,
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        with httpx.Client(timeout=5.0) as client:
+            resp = client.post(url, headers=headers, json=payload)
+        try:
+            data = resp.json()
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"invalid JSON response: {exc}") from exc
+
+        if resp.status_code != 200:
+            err = ""
+            if isinstance(data, dict):
+                error = data.get("error")
+                if isinstance(error, dict):
+                    err = str(error.get("message", "")).strip()
+                elif isinstance(error, str):
+                    err = error.strip()
+            raise ValueError(err or f"HTTP {resp.status_code}")
+
+        if not isinstance(data, dict):
+            raise ValueError("接口异常：响应格式错误")
+        choices = data.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise ValueError("接口异常：缺少 choices")
+        first = choices[0]
+        if not isinstance(first, dict):
+            raise ValueError("接口异常：choice 格式错误")
+        message = first.get("message")
+        if not isinstance(message, dict):
+            raise ValueError("接口异常：缺少 message")
+        return "OK"
+
+    def _postprocess_request_strict(
+        base_url: str, model: str, api_key: str, system_prompt: str, text: str, language: str
+    ) -> str:
+        url = f"{base_url.rstrip('/')}/chat/completions"
+        payload = {
+            "model": model,
+            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": f"原始识别文本：\n{text}\n语言参考：{language or 'zh'}",
+                },
+            ],
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        with httpx.Client(timeout=60.0) as client:
+            resp = client.post(url, headers=headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        processed = _extract_postprocess_text(data if isinstance(data, dict) else {})
+        if not processed:
+            raise ValueError("postprocess returned empty text")
+        return processed
+
+    def _run_postprocess(text: str, language: str) -> str:
+        cfg = load_runtime_config(config_file)
+        if not cfg.postprocess_enabled:
+            return text
+        base_url = cfg.postprocess_base_url.strip()
+        model = cfg.postprocess_model.strip()
+        api_key = cfg.postprocess_api_key.strip()
+        system_prompt = (cfg.postprocess_system_prompt or "").strip() or POSTPROCESS_SYSTEM_PROMPT
+        if not base_url or not model or not api_key:
+            logger.warning("postprocess enabled but config incomplete; fallback to original text")
+            return text
+
+        try:
+            return _postprocess_request_strict(base_url, model, api_key, system_prompt, text, language)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("postprocess failed, fallback to original text: %s", exc)
+            return text
+
     def _asr_request(method: str, path: str, payload: dict[str, object] | None = None) -> dict[str, object]:
         # Keep recording on the local input machine, then forward audio to remote ASR.
         if method.upper() == "POST" and path == "/v1/recording/start":
@@ -768,7 +1039,12 @@ def create_controller_app(config_file: Path) -> FastAPI:
             "sample_rate": sample_rate,
             "language": (language or default_lang or "zh"),
         }
-        return _asr_request("POST", "/v1/transcribe", req)
+        out = _asr_request("POST", "/v1/transcribe", req)
+        if bool(out.get("success")) and isinstance(out.get("text"), str):
+            raw_text = str(out.get("text", "")).strip()
+            if raw_text:
+                out["text"] = _run_postprocess(raw_text, str(out.get("language", language)))
+        return out
 
     hotkey_bridge = X11GlobalHotkeyBridge(_asr_request, logger)
 
@@ -800,6 +1076,11 @@ def create_controller_app(config_file: Path) -> FastAPI:
     @app.get("/api/state")
     def state() -> dict[str, object]:
         cfg = load_runtime_config(config_file)
+        safe_cfg = cfg.model_copy(
+            update={
+                "postprocess_api_key": "",
+            }
+        )
         active_service = (
             ASR_OPENVINO_SERVICE
             if str(cfg.backend).strip().lower() == "openvino"
@@ -813,7 +1094,8 @@ def create_controller_app(config_file: Path) -> FastAPI:
             e, _ = _run_systemctl_user("is-enabled", svc)
             managed[svc] = {"active": a == 0, "enabled": e == 0}
         return {
-            "config": cfg.model_dump(),
+            "config": safe_cfg.model_dump(),
+            "postprocess_api_key_set": bool(cfg.postprocess_api_key.strip()),
             "service": {
                 "active": active_code == 0,
                 "enabled": enabled_code == 0,
@@ -968,6 +1250,53 @@ def create_controller_app(config_file: Path) -> FastAPI:
         saved = save_runtime_config(cfg, config_file)
         hotkey_bridge.apply(req.enabled, req.hotkey)
         return {"success": True, "path": str(saved), "hotkey": hotkey_bridge.state()}
+
+    @app.post("/api/postprocess/config")
+    def postprocess_config(req: PostprocessConfigRequest) -> dict[str, object]:
+        prev = load_runtime_config(config_file)
+        base_url = req.base_url.strip()
+        model = req.model.strip()
+        system_prompt = req.system_prompt.strip() or POSTPROCESS_SYSTEM_PROMPT
+        input_api_key = req.api_key.strip()
+        api_key = input_api_key or prev.postprocess_api_key.strip()
+        if req.enabled:
+            if not base_url or not model or not api_key:
+                raise HTTPException(status_code=400, detail="启用后处理前请先完整填写 Base URL / API Key / Model")
+            try:
+                _postprocess_connectivity_check(base_url, model, api_key)
+            except Exception as exc:  # noqa: BLE001
+                raise HTTPException(status_code=400, detail="连接失败") from exc
+        cfg = prev.model_copy(
+            update={
+                "postprocess_enabled": req.enabled,
+                "postprocess_base_url": base_url,
+                "postprocess_model": model,
+                "postprocess_api_key": api_key,
+                "postprocess_system_prompt": system_prompt,
+            }
+        )
+        saved = save_runtime_config(cfg, config_file)
+        return {
+            "success": True,
+            "path": str(saved),
+            "api_key_set": bool(cfg.postprocess_api_key.strip()),
+            "enabled": cfg.postprocess_enabled,
+        }
+
+    @app.post("/api/postprocess/test")
+    def postprocess_test(req: PostprocessTestRequest) -> dict[str, object]:
+        cfg = load_runtime_config(config_file)
+        base_url = (req.base_url or "").strip() or cfg.postprocess_base_url.strip()
+        model = (req.model or "").strip() or cfg.postprocess_model.strip()
+        api_key = (req.api_key or "").strip() or cfg.postprocess_api_key.strip()
+        raw = (req.text or "").strip() or "连接测试"
+        if not base_url or not model or not api_key:
+            raise HTTPException(status_code=400, detail="请先填写 Base URL / API Key / Model")
+        try:
+            reply = _postprocess_connectivity_check(base_url, model, api_key)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=400, detail="连接失败") from exc
+        return {"success": True, "message": "连接成功", "reply": reply}
 
 
     def _resolve_service(target: str | None = None) -> str:

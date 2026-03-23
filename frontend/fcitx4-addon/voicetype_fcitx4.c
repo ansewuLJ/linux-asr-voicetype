@@ -35,9 +35,9 @@ typedef struct {
     int port;
     int hold_is_right_alt;
     int hold_is_left_alt;
-    FcitxHotkey hold_hotkey;
+    FcitxHotkey hold_hotkey[2];
     char hold_name[32];
-    FcitxHotkey toggle_hotkey;
+    FcitxHotkey toggle_hotkey[2];
     uint64_t watchdog_timeout_id;
 } VoiceTypeFcitx4;
 
@@ -50,6 +50,15 @@ static const int kRecordModeIdle = 0;
 static const int kRecordModeHold = 1;
 static const int kRecordModeToggle = 2;
 static const long kRecordingWatchdogMs = 120000;
+static const int kHotkeySlots = 2;
+
+static void hotkey_reset(FcitxHotkey *hotkey) {
+    if (!hotkey) {
+        return;
+    }
+    FcitxHotkeyFree(hotkey);
+    memset(hotkey, 0, sizeof(FcitxHotkey) * kHotkeySlots);
+}
 
 static void trim_ws(char *s) {
     char *end = NULL;
@@ -74,24 +83,29 @@ static void strip_quotes(char *s) {
     }
 }
 
-static int set_hotkey_with_modifier_alias(FcitxHotkey *hotkey, const char *key) {
+static const char *normalize_hotkey_alias(const char *key) {
     if (!key || !*key) {
-        return 0;
+        return key;
     }
     if (strcasecmp(key, "RALT") == 0 || strcasecmp(key, "ALT_R") == 0 ||
         strcasecmp(key, "RIGHT_ALT") == 0) {
-        hotkey->sym = FcitxKey_Alt_R;
-        hotkey->state = FcitxKeyState_None;
-        hotkey->desc = strdup("RALT");
-        return 1;
+        return "ALT_R";
     }
     if (strcasecmp(key, "LALT") == 0 || strcasecmp(key, "ALT_L") == 0 ||
         strcasecmp(key, "LEFT_ALT") == 0) {
-        hotkey->sym = FcitxKey_Alt_L;
-        hotkey->state = FcitxKeyState_None;
-        hotkey->desc = strdup("LALT");
-        return 1;
+        return "ALT_L";
     }
+    return key;
+}
+
+static int set_hotkey_safe(FcitxHotkey *dst, const char *key, const char *fallback_desc) {
+    const char *raw = (key && *key) ? key : fallback_desc;
+    const char *k = normalize_hotkey_alias(raw);
+    if (!dst || !k || !*k) {
+        return -1;
+    }
+    hotkey_reset(dst);
+    FcitxHotkeySetKey(k, dst);
     return 0;
 }
 
@@ -99,33 +113,27 @@ static void set_hold_key(VoiceTypeFcitx4 *self, const char *key) {
     const char *k = key ? key : "";
     self->hold_is_right_alt = 0;
     self->hold_is_left_alt = 0;
-    memset(&self->hold_hotkey, 0, sizeof(self->hold_hotkey));
+    hotkey_reset(self->hold_hotkey);
 
     if (strcasecmp(k, "RALT") == 0 || strcasecmp(k, "ALT_R") == 0 || strcasecmp(k, "RIGHT_ALT") == 0) {
         self->hold_is_right_alt = 1;
-        self->hold_hotkey.sym = FcitxKey_Alt_R;
-        self->hold_hotkey.state = FcitxKeyState_None;
-        self->hold_hotkey.desc = strdup("ALT_R");
+        (void)set_hotkey_safe(self->hold_hotkey, "ALT_R", kDefaultHoldKey);
         snprintf(self->hold_name, sizeof(self->hold_name), "ALT_R");
         return;
     }
     if (strcasecmp(k, "LALT") == 0 || strcasecmp(k, "ALT_L") == 0 || strcasecmp(k, "LEFT_ALT") == 0) {
         self->hold_is_left_alt = 1;
-        self->hold_hotkey.sym = FcitxKey_Alt_L;
-        self->hold_hotkey.state = FcitxKeyState_None;
-        self->hold_hotkey.desc = strdup("ALT_L");
+        (void)set_hotkey_safe(self->hold_hotkey, "ALT_L", kDefaultHoldKey);
         snprintf(self->hold_name, sizeof(self->hold_name), "ALT_L");
         return;
     }
 
-    if (!set_hotkey_with_modifier_alias(&self->hold_hotkey, k)) {
-        FcitxHotkeySetKey(k, &self->hold_hotkey);
-    }
+    (void)set_hotkey_safe(self->hold_hotkey, k, kDefaultHoldKey);
     snprintf(
         self->hold_name,
         sizeof(self->hold_name),
         "%s",
-        self->hold_hotkey.desc ? self->hold_hotkey.desc : kDefaultHoldKey
+        self->hold_hotkey[0].desc ? self->hold_hotkey[0].desc : kDefaultHoldKey
     );
 }
 
@@ -145,7 +153,7 @@ static int match_hold_key(const VoiceTypeFcitx4 *self, FcitxKeySym sym, unsigned
     if (self->hold_is_left_alt) {
         return sym == FcitxKey_Alt_L || sym == FcitxKey_Meta_L;
     }
-    return FcitxHotkeyIsHotKey(sym, state, &self->hold_hotkey);
+    return FcitxHotkeyIsHotKey(sym, state, self->hold_hotkey);
 }
 
 static int load_runtime_config(VoiceTypeFcitx4 *self) {
@@ -160,7 +168,7 @@ static int load_runtime_config(VoiceTypeFcitx4 *self) {
 
     snprintf(self->host, sizeof(self->host), "%s", kDefaultHost);
     self->port = kDefaultPort;
-    memset(&self->toggle_hotkey, 0, sizeof(self->toggle_hotkey));
+    hotkey_reset(self->toggle_hotkey);
     snprintf(hold_key, sizeof(hold_key), "%s", kDefaultHoldKey);
     snprintf(hold_modifier, sizeof(hold_modifier), "%s", kDefaultHoldModifier);
     snprintf(toggle_key, sizeof(toggle_key), "%s", kDefaultToggleKey);
@@ -230,7 +238,7 @@ static int load_runtime_config(VoiceTypeFcitx4 *self) {
     } else {
         set_hold_key(self, hold_key);
     }
-    FcitxHotkeySetKey(toggle_key, &self->toggle_hotkey);
+    (void)set_hotkey_safe(self->toggle_hotkey, toggle_key, kDefaultToggleKey);
     return 0;
 }
 
@@ -565,7 +573,7 @@ static boolean press_filter(void *arg, FcitxKeySym sym, unsigned int state, INPU
         return false;
     }
 
-    if (match_hotkey(nsym, nstate, &self->toggle_hotkey)) {
+    if (match_hotkey(nsym, nstate, self->toggle_hotkey)) {
         if (!self->toggle_latched) {
             self->toggle_latched = 1;
             if (!self->recording && self->record_mode == kRecordModeIdle) {
@@ -617,7 +625,7 @@ static boolean release_filter(void *arg, FcitxKeySym sym, unsigned int state, IN
         return true;
     }
 
-    if (match_hotkey(nsym, nstate, &self->toggle_hotkey)) {
+    if (match_hotkey(nsym, nstate, self->toggle_hotkey)) {
         self->toggle_latched = 0;
     }
 
@@ -639,7 +647,7 @@ static void *voicetype_create(FcitxInstance *instance) {
     FcitxInstanceRegisterInputUnFocusHook(instance, (FcitxIMEventHook){on_input_unfocus, self});
     FcitxLog(INFO, "voicetype-fcitx4: loaded (hold=%s, toggle=%s, asr=%s:%d)",
              self->hold_name[0] ? self->hold_name : kDefaultHoldKey,
-             self->toggle_hotkey.desc ? self->toggle_hotkey.desc : kDefaultToggleKey,
+             self->toggle_hotkey[0].desc ? self->toggle_hotkey[0].desc : kDefaultToggleKey,
              self->host,
              self->port);
     return self;
@@ -654,8 +662,8 @@ static void voicetype_destroy(void *arg) {
         FcitxInstanceCheckTimeoutById(self->instance, self->watchdog_timeout_id)) {
         FcitxInstanceRemoveTimeoutById(self->instance, self->watchdog_timeout_id);
     }
-    FcitxHotkeyFree(&self->hold_hotkey);
-    FcitxHotkeyFree(&self->toggle_hotkey);
+    FcitxHotkeyFree(self->hold_hotkey);
+    FcitxHotkeyFree(self->toggle_hotkey);
     free(self);
 }
 
@@ -664,8 +672,8 @@ static void voicetype_reload(void *arg) {
     if (!self) {
         return;
     }
-    FcitxHotkeyFree(&self->hold_hotkey);
-    FcitxHotkeyFree(&self->toggle_hotkey);
+    FcitxHotkeyFree(self->hold_hotkey);
+    FcitxHotkeyFree(self->toggle_hotkey);
     load_runtime_config(self);
     if (!self->recording) {
         self->record_mode = kRecordModeIdle;

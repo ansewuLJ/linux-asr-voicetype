@@ -31,6 +31,19 @@ REPO_ID=dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO \
 bash scripts/download_hf_model.sh
 ```
 
+说明：
+- OpenVINO 运行时还需要 `prompt_template.json` 与 `mel_filters.npy`。
+- 若下载模型后缺少这两个文件，请手动复制：
+
+```bash
+MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
+cp assets/openvino_minitool/prompt_template.json "$MODEL_DIR/prompt_template.json"
+cp assets/openvino_minitool/mel_filters.npy "$MODEL_DIR/mel_filters.npy"
+```
+
+- 这两个文件的来源与用途说明见：`assets/openvino_minitool/README.md`
+- 这两个文件参考自第三方项目 `QwenASRMiniTool`；分发前请确认其许可证与模型许可证合规。
+
 Transformers（CPU/GPU）：
 
 ```bash
@@ -97,6 +110,14 @@ fcitx -r
 3. 在“全局热键”里设置按住说话或切换录音热键并保存。
 4. 点击健康检查/保存后，确认服务状态为可用再使用。
 
+### 4.4 文本后处理（可选）
+
+1. 在最终接入 UI（`8790`）打开“文本后处理（可选）”卡片。
+2. 填写 `Base URL`、`Model`、`API Key`，勾选“启用后处理”并保存。
+3. 可点击“测试后处理”先验证效果。
+4. 生效后，录音转写文本会先得到 ASR 结果，再走一次后处理输出最终文本。
+5. 若后处理接口异常/超时，会自动回退原始 ASR 文本，不影响正常输入。
+
 ## 二、双机部署（A 有图形，B 无图形）
 
 - A 机：桌面机，只负责“最终接入 + Fcitx”（`8790`）
@@ -128,6 +149,16 @@ REPO_ID=dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO bash scripts/download_hf_mode
 # 或
 REPO_ID=Qwen/Qwen3-ASR-0.6B bash scripts/download_hf_model.sh
 ```
+
+若使用 OpenVINO，模型目录缺少 `prompt_template.json` / `mel_filters.npy` 时，请手动执行：
+
+```bash
+MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
+cp assets/openvino_minitool/prompt_template.json "$MODEL_DIR/prompt_template.json"
+cp assets/openvino_minitool/mel_filters.npy "$MODEL_DIR/mel_filters.npy"
+```
+
+注意：上述两个文件来自第三方参考项目（见 `assets/openvino_minitool/README.md`），请在对外发布时检查许可证要求。
 
 3) 启动推理侧：
 
