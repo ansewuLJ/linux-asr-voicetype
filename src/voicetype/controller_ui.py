@@ -914,29 +914,30 @@ def create_controller_app(config_file: Path) -> FastAPI:
             return "".join(parts).strip()
         raise ValueError("invalid response: missing content")
 
-    def _postprocess_connectivity_check(base_url: str, model: str, api_key: str) -> str:
-        def _load_response_payload(resp: httpx.Response) -> object:
-            try:
-                return resp.json()
-            except Exception:  # noqa: BLE001
-                raw = (resp.text or "").strip()
-                if not raw:
-                    raise ValueError("invalid JSON response: empty body")
+    def _load_postprocess_response_payload(resp: httpx.Response) -> object:
+        try:
+            return resp.json()
+        except Exception:  # noqa: BLE001
+            raw = (resp.text or "").strip()
+            if not raw:
+                raise ValueError("invalid JSON response: empty body")
 
-                # 兼容 SSE 文本流：data: {...}
-                if "data:" in raw:
-                    for line in raw.splitlines():
-                        line = line.strip()
-                        if not line.startswith("data:"):
-                            continue
-                        chunk = line[5:].strip()
-                        if not chunk or chunk == "[DONE]":
-                            continue
-                        try:
-                            return json.loads(chunk)
-                        except Exception:  # noqa: BLE001
-                            continue
-                raise ValueError("invalid JSON response")
+            # 兼容 SSE 文本流：data: {...}
+            if "data:" in raw:
+                for line in raw.splitlines():
+                    line = line.strip()
+                    if not line.startswith("data:"):
+                        continue
+                    chunk = line[5:].strip()
+                    if not chunk or chunk == "[DONE]":
+                        continue
+                    try:
+                        return json.loads(chunk)
+                    except Exception:  # noqa: BLE001
+                        continue
+            raise ValueError("invalid JSON response")
+
+    def _postprocess_connectivity_check(base_url: str, model: str, api_key: str) -> str:
 
         url = f"{base_url.rstrip('/')}/chat/completions"
         payload = {
@@ -950,7 +951,7 @@ def create_controller_app(config_file: Path) -> FastAPI:
         }
         with httpx.Client(timeout=5.0) as client:
             resp = client.post(url, headers=headers, json=payload)
-        data = _load_response_payload(resp)
+        data = _load_postprocess_response_payload(resp)
 
         if resp.status_code != 200:
             err = ""
@@ -1001,8 +1002,8 @@ def create_controller_app(config_file: Path) -> FastAPI:
         }
         with httpx.Client(timeout=60.0) as client:
             resp = client.post(url, headers=headers, json=payload)
+        data = _load_postprocess_response_payload(resp)
         resp.raise_for_status()
-        data = resp.json()
         processed = _extract_postprocess_text(data if isinstance(data, dict) else {})
         if not processed:
             raise ValueError("postprocess returned empty text")
