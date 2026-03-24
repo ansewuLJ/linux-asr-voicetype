@@ -7,7 +7,7 @@ PROJECT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 # ===== Editable Defaults =====
 UV_BIN="${UV_BIN:-$HOME/.local/bin/uv}"
 WORKDIR="${WORKDIR:-$PROJECT_DIR}"
-HOST="${HOST:-127.0.0.1}"
+HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8789}"
 MODEL="${MODEL:-}"
 DEVICE="${DEVICE:-CPU}"

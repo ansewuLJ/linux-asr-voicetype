@@ -37,7 +37,6 @@ class OpenVinoConfigRequest(BaseModel):
     device: str = "CPU"
     hf_endpoint: str = "https://hf-mirror.com"
     dtype: str = ""
-    max_inference_batch_size: int = 1
 
 
 class ManagerUiConfigRequest(BaseModel):
@@ -56,6 +55,7 @@ class SimpleConfigRequest(BaseModel):
     model: str = ""
     device: str = "cpu"
     hf_endpoint: str = "https://hf-mirror.com"
+    max_inference_batch_size: int = 1
 
 
 def _run_systemctl_user(*args: str) -> tuple[int, str]:
@@ -137,7 +137,6 @@ def _default_openvino_env() -> dict[str, str]:
         "DEVICE": "CPU",
         "HF_ENDPOINT": "https://hf-mirror.com",
         "DTYPE": "",
-        "MAX_INFERENCE_BATCH_SIZE": "1",
     }
 
 
@@ -262,6 +261,9 @@ def render_ui() -> str:
         <div class=\"field\"><label>Device</label><select id=\"device\"></select></div>
         <div class=\"field\"><label>HF 镜像</label><input id=\"hf\" placeholder=\"https://hf-mirror.com\"></div>
       </div>
+      <div class=\"row\" id=\"batchField\">
+        <div class=\"field\"><label>最大推理批大小（仅 Transformers）</label><input id=\"batch\" type=\"number\" min=\"1\" value=\"1\" placeholder=\"1\"></div>
+      </div>
       <div class=\"actions\">
         <button class=\"primary\" onclick=\"saveConfig()\">保存配置</button>
         <button onclick=\"startBackend()\">启动推理服务</button>
@@ -291,6 +293,8 @@ def render_ui() -> str:
     const port = document.getElementById('port');
     const device = document.getElementById('device');
     const hf = document.getElementById('hf');
+    const batch = document.getElementById('batch');
+    const batchField = document.getElementById('batchField');
 
     async function req(url, opt) {
       const r = await fetch(url, opt);
@@ -306,6 +310,10 @@ def render_ui() -> str:
     }
     function backendService(backend) {
       return backend === 'openvino' ? 'asr-openvino.service' : 'asr-transformers.service';
+    }
+
+    function toggleBatchField() {
+      batchField.style.display = backend.value === 'transformers' ? '' : 'none';
     }
 
     async function loadDeviceOptions(selected = '') {
@@ -332,17 +340,21 @@ def render_ui() -> str:
 
     async function saveConfig() {
       try {
+        const payload = {
+          backend: backend.value,
+          host: host.value,
+          port: Number(port.value),
+          model: model.value,
+          device: device.value,
+          hf_endpoint: hf.value
+        };
+        if (backend.value === 'transformers') {
+          payload.max_inference_batch_size = Number(batch.value || 1);
+        }
         await req('/api/config/simple', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({
-            backend: backend.value,
-            host: host.value,
-            port: Number(port.value),
-            model: model.value,
-            device: device.value,
-            hf_endpoint: hf.value
-          })
+          body: JSON.stringify(payload)
         });
         setTop('配置已保存', true);
         await refreshAll();
@@ -400,6 +412,8 @@ def render_ui() -> str:
         port.value = c.PORT || '';
         model.value = c.MODEL || '';
         hf.value = c.HF_ENDPOINT || '';
+        batch.value = String(t.MAX_INFERENCE_BATCH_SIZE || '1');
+        toggleBatchField();
         await loadDeviceOptions(c.DEVICE || '');
 
         const out = await req('/api/services');
@@ -429,6 +443,8 @@ def render_ui() -> str:
       port.value = c.PORT || '';
       model.value = c.MODEL || '';
       hf.value = c.HF_ENDPOINT || '';
+      batch.value = String(cfg.transformers.MAX_INFERENCE_BATCH_SIZE || '1');
+      toggleBatchField();
       await loadDeviceOptions(c.DEVICE || '');
     });
 
@@ -499,7 +515,6 @@ def create_asr_manager_app() -> FastAPI:
                 "DEVICE": device,
                 "HF_ENDPOINT": req.hf_endpoint,
                 "DTYPE": req.dtype,
-                "MAX_INFERENCE_BATCH_SIZE": str(req.max_inference_batch_size),
             },
         )
         return {"success": True, "path": str(OPENVINO_ENV)}
@@ -509,6 +524,8 @@ def create_asr_manager_app() -> FastAPI:
         backend = req.backend.strip().lower()
         if backend not in {"transformers", "openvino"}:
             raise HTTPException(status_code=400, detail=f"unsupported backend: {req.backend}")
+        if req.max_inference_batch_size < 1:
+            raise HTTPException(status_code=400, detail="max_inference_batch_size must be >= 1")
         normalized_device = _normalize_device(backend, req.device)
 
         cfg = _current_configs()
@@ -522,6 +539,7 @@ def create_asr_manager_app() -> FastAPI:
                     "MODEL": req.model,
                     "DEVICE": normalized_device,
                     "HF_ENDPOINT": req.hf_endpoint,
+                    "MAX_INFERENCE_BATCH_SIZE": str(req.max_inference_batch_size),
                 }
             )
             _write_env(TRANSFORMERS_ENV, base)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 安装推理机 systemd user units
-# 用法: ./scripts/install_infer_systemd.sh [--ui-host 127.0.0.1] [--ui-port 8788]
+# 用法: ./scripts/install_infer_systemd.sh [--ui-host 0.0.0.0] [--ui-port 8788]
 
 set -euo pipefail
 
@@ -10,7 +10,7 @@ SYSTEMD_SRC="$PROJECT_DIR/systemd"
 USER_SYSTEMD_DIR="$HOME/.config/systemd/user"
 CONFIG_DIR="$HOME/.config/asr-services"
 
-UI_HOST="127.0.0.1"
+UI_HOST="0.0.0.0"
 UI_PORT="8788"
 
 log() {
@@ -61,7 +61,7 @@ log "Installed: asr-manager-ui.service"
 # 创建默认配置文件
 if [[ ! -f "$CONFIG_DIR/openvino.env" ]]; then
   cat > "$CONFIG_DIR/openvino.env" << 'EOF'
-HOST=127.0.0.1
+HOST=0.0.0.0
 PORT=8789
 MODEL=
 DEVICE=CPU
@@ -72,7 +72,7 @@ fi
 
 if [[ ! -f "$CONFIG_DIR/transformers.env" ]]; then
   cat > "$CONFIG_DIR/transformers.env" << 'EOF'
-HOST=127.0.0.1
+HOST=0.0.0.0
 PORT=8789
 MODEL=Qwen/Qwen3-ASR-0.6B
 DEVICE=cpu

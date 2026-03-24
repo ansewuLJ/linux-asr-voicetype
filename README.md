@@ -73,7 +73,7 @@ fcitx -r
 ---
 
 ## 服务部署
-先按 uv 官方文档安装：`https://docs.astral.sh/uv/getting-started/installation/`
+依赖uv，先按 uv 官方文档安装：`https://docs.astral.sh/uv/getting-started/installation/`
 
 ### 单机部署
 
@@ -102,11 +102,20 @@ uv run voicetype model download Qwen/Qwen3-ASR-0.6B \
 
 # 3. 安装 systemd 服务
 ./scripts/install_controller_systemd.sh --ui-host 127.0.0.1 --ui-port 8790
-./scripts/install_infer_systemd.sh --ui-host 127.0.0.1 --ui-port 8788
+./scripts/install_infer_systemd.sh --ui-host 0.0.0.0 --ui-port 8788
+# 上面两个脚本主要会写入：
+# ~/.config/systemd/user/voicetype-ui.service      # 控制 UI 的 user service 定义
+# ~/.config/systemd/user/asr-manager-ui.service    # 管理 UI 的 user service 定义
+# ~/.config/systemd/user/asr-openvino.service      # OpenVINO 推理服务定义
+# ~/.config/systemd/user/asr-transformers.service  # Transformers 推理服务定义
+# ~/.config/asr-services/controller.env            # 控制 UI 的 host/port 配置
+# ~/.config/asr-services/manager-ui.env            # 管理 UI 的 host/port 配置
+# ~/.config/asr-services/openvino.env              # OpenVINO 推理参数配置
+# ~/.config/asr-services/transformers.env          # Transformers 推理参数配置
 
 # 4. 启动管理面，配置推理服务
 systemctl --user enable --now asr-manager-ui.service
-# 打开 http://127.0.0.1:8788 配置模型路径、推理服务
+# 打开 http://127.0.0.1:8788（本机）或 http://<本机IP>:8788（远程）配置模型路径、推理服务
 
 # 5. 启动控制面
 systemctl --user enable --now voicetype-ui.service
@@ -160,6 +169,26 @@ source .venv/bin/activate
 systemctl --user enable --now voicetype-ui.service
 # http://127.0.0.1:8790 配置推理机地址
 ```
+
+---
+
+## 服务控制
+
+- 控制 UI（`voicetype-ui.service`，端口 `8790`）
+```bash
+systemctl --user status voicetype-ui.service
+systemctl --user restart voicetype-ui.service
+systemctl --user stop voicetype-ui.service
+```
+
+- 管理 UI（`asr-manager-ui.service`，端口 `8788`）
+```bash
+systemctl --user status asr-manager-ui.service
+systemctl --user restart asr-manager-ui.service
+systemctl --user stop asr-manager-ui.service
+```
+
+推理服务（`8789`）由管理 UI 统一启动/重载，不需要单独长期维护一个第三套操作流程。
 
 ---
 

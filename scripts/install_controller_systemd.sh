@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # 安装控制面 systemd user unit
-# 用法: ./scripts/install_controller_systemd.sh [--host 127.0.0.1] [--port 8790]
+# 用法: ./scripts/install_controller_systemd.sh [--ui-host 127.0.0.1] [--ui-port 8790]
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+SYSTEMD_SRC="$PROJECT_DIR/systemd"
 USER_SYSTEMD_DIR="$HOME/.config/systemd/user"
 CONFIG_DIR="$HOME/.config/asr-services"
 
@@ -30,49 +31,22 @@ done
 mkdir -p "$USER_SYSTEMD_DIR"
 mkdir -p "$CONFIG_DIR"
 
-# 创建启动脚本
-cat > "$PROJECT_DIR/scripts/start_controller_ui.sh" << EOF
-#!/usr/bin/env bash
-set -euo pipefail
-cd "${PROJECT_DIR}"
-UI_HOST="\${UI_HOST:-${UI_HOST}}" UI_PORT="\${UI_PORT:-${UI_PORT}}" \\
-  exec uv run voicetype ui --host "\${UI_HOST}" --port "\${UI_PORT}"
-EOF
-chmod +x "$PROJECT_DIR/scripts/start_controller_ui.sh"
-log "Created: scripts/start_controller_ui.sh"
-
-# 创建 systemd service
-cat > "$USER_SYSTEMD_DIR/voicetype-ui.service" << EOF
-[Unit]
-Description=VoiceType Controller UI
-After=network-online.target
-
-[Service]
-Type=simple
-WorkingDirectory=${PROJECT_DIR}
-Environment=UI_HOST=${UI_HOST}
-Environment=UI_PORT=${UI_PORT}
-Environment=DISPLAY=:0
-Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
-Environment=XDG_RUNTIME_DIR=%t
-Environment=PULSE_SERVER=unix:%t/pulse/native
-ExecStart=${PROJECT_DIR}/scripts/start_controller_ui.sh
-Restart=always
-RestartSec=2
-
-[Install]
-WantedBy=default.target
-EOF
-log "Created: $USER_SYSTEMD_DIR/voicetype-ui.service"
+# 安装控制面 service（替换硬编码路径）
+if [[ -f "$SYSTEMD_SRC/voicetype-ui.service" ]]; then
+  sed "s|%h/code/linux-asr-voicetype|$PROJECT_DIR|g" \
+    "$SYSTEMD_SRC/voicetype-ui.service" > "$USER_SYSTEMD_DIR/voicetype-ui.service"
+  log "Installed: voicetype-ui.service"
+else
+  log "Missing template: $SYSTEMD_SRC/voicetype-ui.service"
+  exit 1
+fi
 
 # 创建配置文件
-if [[ ! -f "$CONFIG_DIR/controller.env" ]]; then
-  cat > "$CONFIG_DIR/controller.env" << EOF
+cat > "$CONFIG_DIR/controller.env" << EOF
 UI_HOST=${UI_HOST}
 UI_PORT=${UI_PORT}
 EOF
-  log "Created: $CONFIG_DIR/controller.env"
-fi
+log "Wrote: $CONFIG_DIR/controller.env"
 
 systemctl --user daemon-reload
 log "systemd daemon-reload complete"

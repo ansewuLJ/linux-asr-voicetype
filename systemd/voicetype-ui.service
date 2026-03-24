@@ -1,0 +1,17 @@
+[Unit]
+Description=VoiceType Controller UI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/code/linux-asr-voicetype
+Environment=DISPLAY=:0
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
+Environment=XDG_RUNTIME_DIR=%t
+Environment=PULSE_SERVER=unix:%t/pulse/native
+ExecStart=%h/code/linux-asr-voicetype/scripts/start_controller_ui.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
