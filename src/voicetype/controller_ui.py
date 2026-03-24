@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import logging
 import os
 import shutil
@@ -876,7 +877,24 @@ def create_controller_app(config_file: Path) -> FastAPI:
             return False, str(exc)
 
     def _extract_postprocess_text(resp_json: dict[str, object]) -> str:
-        choices = resp_json.get("choices")
+        def _normalize_chat_response_payload(payload: object) -> dict[str, object]:
+            if isinstance(payload, dict):
+                if isinstance(payload.get("choices"), list):
+                    return payload
+                nested = payload.get("data")
+                if isinstance(nested, dict) and isinstance(nested.get("choices"), list):
+                    return nested
+                if isinstance(nested, str):
+                    try:
+                        nested_json = json.loads(nested)
+                    except Exception:  # noqa: BLE001
+                        nested_json = None
+                    if isinstance(nested_json, dict) and isinstance(nested_json.get("choices"), list):
+                        return nested_json
+            return {}
+
+        normalized = _normalize_chat_response_payload(resp_json)
+        choices = normalized.get("choices")
         if not isinstance(choices, list) or not choices:
             raise ValueError("invalid response: missing choices")
         first = choices[0]
@@ -897,6 +915,29 @@ def create_controller_app(config_file: Path) -> FastAPI:
         raise ValueError("invalid response: missing content")
 
     def _postprocess_connectivity_check(base_url: str, model: str, api_key: str) -> str:
+        def _load_response_payload(resp: httpx.Response) -> object:
+            try:
+                return resp.json()
+            except Exception:  # noqa: BLE001
+                raw = (resp.text or "").strip()
+                if not raw:
+                    raise ValueError("invalid JSON response: empty body")
+
+                # 兼容 SSE 文本流：data: {...}
+                if "data:" in raw:
+                    for line in raw.splitlines():
+                        line = line.strip()
+                        if not line.startswith("data:"):
+                            continue
+                        chunk = line[5:].strip()
+                        if not chunk or chunk == "[DONE]":
+                            continue
+                        try:
+                            return json.loads(chunk)
+                        except Exception:  # noqa: BLE001
+                            continue
+                raise ValueError("invalid JSON response")
+
         url = f"{base_url.rstrip('/')}/chat/completions"
         payload = {
             "model": model,
@@ -909,10 +950,7 @@ def create_controller_app(config_file: Path) -> FastAPI:
         }
         with httpx.Client(timeout=5.0) as client:
             resp = client.post(url, headers=headers, json=payload)
-        try:
-            data = resp.json()
-        except Exception as exc:  # noqa: BLE001
-            raise ValueError(f"invalid JSON response: {exc}") from exc
+        data = _load_response_payload(resp)
 
         if resp.status_code != 200:
             err = ""
@@ -926,7 +964,12 @@ def create_controller_app(config_file: Path) -> FastAPI:
 
         if not isinstance(data, dict):
             raise ValueError("接口异常：响应格式错误")
-        choices = data.get("choices")
+        normalized = data
+        if not isinstance(normalized.get("choices"), list):
+            nested = normalized.get("data")
+            if isinstance(nested, dict):
+                normalized = nested
+        choices = normalized.get("choices")
         if not isinstance(choices, list) or not choices:
             raise ValueError("接口异常：缺少 choices")
         first = choices[0]
