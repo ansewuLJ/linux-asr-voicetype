@@ -5,20 +5,27 @@ description = "Independent fcitx5 + Python Qwen3-ASR input stack"
 readme = "README.md"
 authors = [{ name = "lijie", email = "lijie@users.noreply.github.com" }]
 requires-python = ">=3.11"
+
+# 基础依赖：控制机和推理机都需要
 dependencies = [
   "fastapi>=0.116.0",
   "uvicorn[standard]>=0.35.0",
-  "numpy>=2.1.0",
-  "soundfile>=0.13.1",
   "pydantic>=2.11.0",
   "typer>=0.16.0",
   "httpx>=0.28.0",
   "huggingface-hub>=0.36.0",
-  "openvino>=2025.4.0",
 ]
 
 [project.optional-dependencies]
-asr = [
+# 控制机依赖：全局热键（X11）
+controller = [
+  "pynput>=1.7.7",
+]
+
+# 推理机依赖：ASR 推理引擎
+infer = [
+  "numpy>=2.1.0",
+  "openvino>=2025.4.0",
   "qwen-asr>=0.0.6",
   "torch>=2.8.0",
   "transformers>=4.56.0",

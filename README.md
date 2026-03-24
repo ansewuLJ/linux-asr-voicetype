@@ -1,189 +1,169 @@
-# linux-asr-voicetype
+# VoiceType
 
-Linux 桌面语音输入方案，基于 Qwen3-ASR，面向中文/中英混合输入场景。  
-支持 Fcitx4/Fcitx5 接入，也支持全局热键模式；支持 Transformers / OpenVINO 两种推理后端，并提供“推理管理 UI + 最终接入 UI”的双控制面，便于单机或双机部署。  
+Linux 桌面语音输入方案，基于 Qwen3-ASR，面向中文/中英混合输入场景。
+支持 Fcitx4/Fcitx5 接入，也支持全局热键模式；支持 Transformers / OpenVINO 两种推理后端。
 
-默认端口如下：
-- 推理管理 UI：`8788`
-- 推理服务：`8789`
-- 最终接入 UI：`8790`
+默认端口：
+- 管理面：`8788`
+- 推理面：`8789`
+- 控制面：`8790`
 
-三者可以独立运行。你可以单机部署，也可以分成两台机器部署。
+---
 
-## 一、单机部署（全部在一台机器）
+## 系统依赖安装
 
-### 1) 安装（接入侧 + 依赖）
-
+### 判断 Fcitx 版本
 ```bash
-cd linux-asr-voicetype
-./install.sh
+fcitx --version  # 显示版本号则为 Fcitx4
+fcitx5 --version # 显示版本号则为 Fcitx5
 ```
 
-这一步会启动最终接入 UI（`http://127.0.0.1:8790`）。
+### Debian/Ubuntu
 
-### 2) 下载模型（按需二选一）
-
-OpenVINO（CPU 推荐）：
-
+**Fcitx5**
 ```bash
-cd linux-asr-voicetype
-REPO_ID=dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO \
-bash scripts/download_hf_model.sh
-```
+sudo apt install alsa-utils xdotool build-essential cmake pkg-config \
+  libcurl4-openssl-dev nlohmann-json3-dev fcitx5-dev
 
-说明：
-- OpenVINO 必做：先在模型目录生成 `prompt_template.json` 和 `mel_filters.npy`。
-
-```bash
-MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
-uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
-```
-
-Transformers（CPU/GPU）：
-
-```bash
-cd linux-asr-voicetype
-REPO_ID=Qwen/Qwen3-ASR-0.6B \
-bash scripts/download_hf_model.sh
-```
-
-### 3) 启动推理侧（管理 UI + systemd 服务）
-
-```bash
-cd linux-asr-voicetype
-bash scripts/start_infer_service.sh --ui-host 127.0.0.1 --ui-port 8788
-```
-
-打开推理管理 UI：`http://127.0.0.1:8788`
-
-在推理管理 UI 中按顺序：
-1. 选后端（`openvino` / `transformers`）
-2. 填模型、host、port、device、HF 镜像
-3. 点“保存配置”
-4. 点“启动/重载推理服务”
-
-### 4) 在最终接入 UI 接入推理服务
-
-打开 `http://127.0.0.1:8790`，把推理地址填为：
-- host: `127.0.0.1`
-- port: `8789`
-
-按你的使用方式继续配置：
-
-### 4.1 Fcitx5 配置
-
-1. 打开 `fcitx5-configtool`。
-2. 进入“附加组件”，找到 `VoiceType`（或 `VoiceType 语音输入`），确保已启用。
-3. 打开该组件配置，填写：
-   - `ASR Host`：最终接入 UI 主机（一般是本机 `127.0.0.1`）
-   - `ASR Port`：最终接入 UI 端口（默认 `8790`）
-   - `Hold-To-Talk Key` / `Toggle Recording Key`：按你的习惯设置热键
-4. 应用配置后执行：
-
-```bash
+cd frontend/fcitx5-addon
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build -j$(nproc)
+sudo cmake --install build
 fcitx5 -r
 ```
 
-### 4.2 Fcitx4 配置
-
-1. 打开 `fcitx-configtool`。
-2. 进入“附加组件”，找到 `VoiceType`，确保已启用。
-3. 在 VoiceType 配置里填写：
-   - `ASR Host`：最终接入 UI 主机（一般是本机 `127.0.0.1`）
-   - `ASR Port`：最终接入 UI 端口（默认 `8790`）
-   - `HoldKey` / `ToggleKey`：设置录音热键
-4. 应用配置后执行：
-
+**Fcitx4**
 ```bash
+sudo apt install alsa-utils xdotool build-essential cmake pkg-config \
+  libcurl4-openssl-dev nlohmann-json3-dev fcitx-libs-dev
+
+cd frontend/fcitx4-addon
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build -j$(nproc)
+sudo cmake --install build
 fcitx -r
 ```
 
-### 4.3 全局热键模式（Fcitx 不可用时）
+### Fedora/RHEL
 
-1. 打开最终接入 UI：`http://127.0.0.1:8790`。
-2. 在“接入配置”里填写推理服务 `host` 和 `port` 并保存。
-3. 在“全局热键”里设置按住说话或切换录音热键并保存。
-4. 点击健康检查/保存后，确认服务状态为可用再使用。
-
-### 4.4 文本后处理（可选）
-
-1. 在最终接入 UI（`8790`）打开“文本后处理（可选）”卡片。
-2. 填写 `Base URL`、`Model`、`API Key`，勾选“启用后处理”并保存。
-3. 可点击“测试后处理”先验证效果。
-4. 生效后，录音转写文本会先得到 ASR 结果，再走一次后处理输出最终文本。
-5. 若后处理接口异常/超时，会自动回退原始 ASR 文本，不影响正常输入。
-
-## 二、双机部署（A 有图形，B 无图形）
-
-- A 机：桌面机，只负责“最终接入 + Fcitx”（`8790`）
-- B 机：推理机，只负责“推理管理 UI + 推理服务”（`8788/8789`）
-
-### A 机（有图形）
-
+**Fcitx5**
 ```bash
-cd linux-asr-voicetype
-./install.sh
+sudo dnf install alsa-utils xdotool gcc gcc-c++ make cmake pkgconf-pkg-config \
+  libcurl-devel nlohmann-json-devel fcitx5-devel
+
+cd frontend/fcitx5-addon
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build -j$(nproc)
+sudo cmake --install build
+fcitx5 -r
 ```
 
-打开最终接入 UI：`http://127.0.0.1:8790`
-
-### B 机（无图形，纯推理）
-
-1) 安装最小集（不装 Fcitx，不启最终 UI）：
-
+**Fcitx4**
 ```bash
-cd linux-asr-voicetype
-./install.sh --no-addon --no-ui-service
+sudo dnf install alsa-utils xdotool gcc gcc-c++ make cmake pkgconf-pkg-config \
+  libcurl-devel nlohmann-json-devel fcitx-devel
+
+cd frontend/fcitx4-addon
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build -j$(nproc)
+sudo cmake --install build
+fcitx -r
 ```
 
-2) 下载模型（按需二选一）：
+---
+
+## 服务部署
+先按 uv 官方文档安装：`https://docs.astral.sh/uv/getting-started/installation/`
+
+### 单机部署
 
 ```bash
+# 1. Python 依赖
 cd linux-asr-voicetype
-REPO_ID=dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO bash scripts/download_hf_model.sh
-# 或
-REPO_ID=Qwen/Qwen3-ASR-0.6B bash scripts/download_hf_model.sh
-```
+# 先确保 uv 已安装（官方安装文档见上）
+# uv sync 会自动创建并使用项目虚拟环境
+uv sync --all-extras
+# 需要在当前 shell 里直接运行 python/pip 时，手动激活
+source .venv/bin/activate
 
-OpenVINO 必做：先在模型目录生成 `prompt_template.json` 和 `mel_filters.npy`：
+# 2. 下载模型（二选一）
 
-```bash
+# OpenVINO（CPU 推荐）
+uv run voicetype model download dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO \
+  --local-dir models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
+
+# OpenVINO 必做：生成 prompt_template.json 和 mel_filters.npy
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
 uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
+
+# 或 Transformers（CPU/GPU）
+uv run voicetype model download Qwen/Qwen3-ASR-0.6B \
+  --local-dir models/Qwen3-ASR-0.6B
+
+# 3. 安装 systemd 服务
+./scripts/install_controller_systemd.sh --ui-host 127.0.0.1 --ui-port 8790
+./scripts/install_infer_systemd.sh --ui-host 127.0.0.1 --ui-port 8788
+
+# 4. 启动管理面，配置推理服务
+systemctl --user enable --now asr-manager-ui.service
+# 打开 http://127.0.0.1:8788 配置模型路径、推理服务
+
+# 5. 启动控制面
+systemctl --user enable --now voicetype-ui.service
+# 打开 http://127.0.0.1:8790 管理接入、热词等
 ```
 
-3) 启动推理侧：
+### 双机部署
+
+#### 推理机
 
 ```bash
+# Python 依赖（仅推理）
 cd linux-asr-voicetype
-bash scripts/start_infer_service.sh --ui-host 0.0.0.0 --ui-port 8788
+# 先确保 uv 已安装（官方安装文档见上）
+# uv sync 会自动创建并使用项目虚拟环境
+uv sync --extra infer
+# 需要在当前 shell 里直接运行 python/pip 时，手动激活
+source .venv/bin/activate
+
+# 下载模型（二选一）
+uv run voicetype model download dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO \
+  --local-dir models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
+
+# OpenVINO 必做
+MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
+uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
+
+# 或 Transformers
+uv run voicetype model download Qwen/Qwen3-ASR-0.6B \
+  --local-dir models/Qwen3-ASR-0.6B
+
+# 安装 systemd（允许外部访问管理 UI）
+./scripts/install_infer_systemd.sh --ui-host 0.0.0.0 --ui-port 8788
+systemctl --user enable --now asr-manager-ui.service
+# 打开 http://<推理机ip>:8788 配置模型路径、推理服务
 ```
 
-4) 在 B 机推理管理 UI（`http://<B机IP>:8788`）中把推理服务配置为：
-- host: `0.0.0.0`
-- port: `8789`
-
-5) 回到 A 机最终接入 UI（`8790`）里填写：
-- host: `<B机IP>`
-- port: `8789`
-
-6) A 机上的 Fcitx4/Fcitx5 插件请配置到本机最终接入 UI：
-- host: `127.0.0.1`
-- port: `8790`
-
-## 三、常用 systemd 命令
-
-
-全部停止：
+#### 控制机
 
 ```bash
-systemctl --user stop asr-transformers.service
-systemctl --user stop asr-openvino.service
-systemctl --user stop asr-manager-ui.service
-systemctl --user stop voicetype-ui.service
+# Python 依赖（仅控制）
+cd linux-asr-voicetype
+# 先确保 uv 已安装（官方安装文档见上）
+# uv sync 会自动创建并使用项目虚拟环境
+uv sync --extra controller
+# 需要在当前 shell 里直接运行 python/pip 时，手动激活
+source .venv/bin/activate
+
+# 安装并启动
+./scripts/install_controller_systemd.sh
+systemctl --user enable --now voicetype-ui.service
+# http://127.0.0.1:8790 配置推理机地址
 ```
+
+---
 
 ## 致谢
 
-- 本仓库 OpenVINO 处理链路参考了 `QwenASRMiniTool` 项目（包括 `processor_numpy.py` 思路与 `generate_prompt_template.py` 生成流程）：
+- 本仓库 OpenVINO 处理链路参考了 `QwenASRMiniTool` 项目：
   `https://github.com/dseditor/QwenASRMiniTool.git`

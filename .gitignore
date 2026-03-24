@@ -8,6 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+.python-version
 
 # Local model artifacts (do not commit large runtime model files)
 models/
