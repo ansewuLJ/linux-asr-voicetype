@@ -29,7 +29,7 @@ cd frontend/fcitx5-addon
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build -j$(nproc)
 sudo cmake --install build
-fcitx5 -r
+fcitx5-remote -r
 ```
 
 **Fcitx4**
@@ -41,7 +41,7 @@ cd frontend/fcitx4-addon
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build -j$(nproc)
 sudo cmake --install build
-fcitx -r
+fcitx-remote -r
 ```
 
 ### Fedora/RHEL
@@ -55,7 +55,7 @@ cd frontend/fcitx5-addon
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build -j$(nproc)
 sudo cmake --install build
-fcitx5 -r
+fcitx5-remote -r
 ```
 
 **Fcitx4**
@@ -67,7 +67,7 @@ cd frontend/fcitx4-addon
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build -j$(nproc)
 sudo cmake --install build
-fcitx -r
+fcitx-remote -r
 ```
 
 ---
