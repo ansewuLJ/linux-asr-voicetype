@@ -2772,6 +2772,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "huggingface-hub" },
+    { name = "numpy" },
     { name = "pydantic" },
     { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
@@ -2782,7 +2783,6 @@ controller = [
     { name = "pynput" },
 ]
 infer = [
-    { name = "numpy" },
     { name = "openvino" },
     { name = "qwen-asr" },
     { name = "tokenizers" },
@@ -2795,7 +2795,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116.0" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "huggingface-hub", specifier = ">=0.36.0" },
-    { name = "numpy", marker = "extra == 'infer'", specifier = ">=2.1.0" },
+    { name = "numpy", specifier = ">=2.1.0" },
     { name = "openvino", marker = "extra == 'infer'", specifier = ">=2025.4.0" },
     { name = "pydantic", specifier = ">=2.11.0" },
     { name = "pynput", marker = "extra == 'controller'", specifier = ">=1.7.7" },
