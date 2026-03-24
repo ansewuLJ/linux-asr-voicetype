@@ -176,16 +176,16 @@ systemctl --user enable --now voicetype-ui.service
 
 - 控制 UI（`voicetype-ui.service`，端口 `8790`）
 ```bash
-systemctl --user status voicetype-ui.service
-systemctl --user restart voicetype-ui.service
-systemctl --user stop voicetype-ui.service
+systemctl --user status voicetype-ui.service   # 查看当前状态
+systemctl --user restart voicetype-ui.service  # 重启服务（改配置后常用）
+systemctl --user stop voicetype-ui.service     # 停止服务
 ```
 
 - 管理 UI（`asr-manager-ui.service`，端口 `8788`）
 ```bash
-systemctl --user status asr-manager-ui.service
-systemctl --user restart asr-manager-ui.service
-systemctl --user stop asr-manager-ui.service
+systemctl --user status asr-manager-ui.service   # 查看当前状态
+systemctl --user restart asr-manager-ui.service  # 重启服务（改配置后常用）
+systemctl --user stop asr-manager-ui.service     # 停止服务
 ```
 
 推理服务（`8789`）由管理 UI 统一启动/重载，不需要单独长期维护一个第三套操作流程。
