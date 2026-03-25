@@ -233,15 +233,9 @@ To clean all related user services and configs, run: `./scripts/uninstall_user_s
 
 ## ✦ Related Files
 
-- `~/.config/systemd/user/voicetype-ui.service`: controller UI user service
-- `~/.config/systemd/user/asr-manager-ui.service`: manager UI user service
-- `~/.config/systemd/user/asr-openvino.service`: OpenVINO inference service
-- `~/.config/systemd/user/asr-transformers.service`: Transformers inference service
-- `~/.config/asr-services/controller.env`: controller UI host/port config
-- `~/.config/asr-services/manager-ui.env`: manager UI host/port config
-- `~/.config/asr-services/openvino.env`: OpenVINO inference config
-- `~/.config/asr-services/transformers.env`: Transformers inference config
-- `~/.config/voicetype/runtime.json`: controller runtime config (ASR host/port, hotkey, postprocess settings including `postprocess_system_prompt`)
+- `~/.config/systemd/user/`: user service definitions
+- `~/.config/asr-services/`: ASR service configs
+- `~/.config/voicetype/`: controller runtime configs
 
 ---
 

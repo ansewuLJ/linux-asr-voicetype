@@ -233,15 +233,9 @@ systemctl --user stop asr-manager-ui.service     # 停止服务
 
 ## ✦ 相关文件
 
-- `~/.config/systemd/user/voicetype-ui.service`：控制 UI 的 user service 定义
-- `~/.config/systemd/user/asr-manager-ui.service`：管理 UI 的 user service 定义
-- `~/.config/systemd/user/asr-openvino.service`：OpenVINO 推理服务定义
-- `~/.config/systemd/user/asr-transformers.service`：Transformers 推理服务定义
-- `~/.config/asr-services/controller.env`：控制 UI 的 host/port 配置
-- `~/.config/asr-services/manager-ui.env`：管理 UI 的 host/port 配置
-- `~/.config/asr-services/openvino.env`：OpenVINO 推理参数配置
-- `~/.config/asr-services/transformers.env`：Transformers 推理参数配置
-- `~/.config/voicetype/runtime.json`：控制端运行时配置（ASR host/port、热键、后处理配置，含 `postprocess_system_prompt`）
+- `~/.config/systemd/user/`：user service 定义目录
+- `~/.config/asr-services/`：ASR 服务配置目录
+- `~/.config/voicetype/`：控制端运行时配置目录
 
 ---
 
