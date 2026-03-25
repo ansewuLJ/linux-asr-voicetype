@@ -29,7 +29,7 @@ constexpr const char *kVoiceTypeConfigPath = "conf/voicetype.conf";
 
 struct VoiceTypeSettings {
   fcitx::KeyList triggerKeys{fcitx::Key(FcitxKey_Alt_R)};
-  fcitx::KeyList toggleKeys{fcitx::Key("Alt+z")};
+  fcitx::KeyList toggleKeys{};
   std::string host = kDefaultHost;
   int port = kDefaultPort;
 };
@@ -51,7 +51,7 @@ public:
         toggleKeys(this, "ToggleKey", "Toggle Recording Key", settings.toggleKeys,
                    TriggerKeyListConstrain(), {},
                    fcitx::ToolTipAnnotation(
-                       "Press once to start recording, press again to stop and transcribe. Default: Alt+Z.")),
+                       "Press once to start recording, press again to stop and transcribe. Disabled by default.")),
         host(this, "Host", "ASR Host", settings.host, {},
              {}, fcitx::ToolTipAnnotation("ASR service host. 需要与UI配置完全相同。")),
         port(this, "Port", "ASR Port", settings.port, fcitx::IntConstrain(1, 65535),
@@ -238,6 +238,9 @@ private:
   }
 
   bool isToggleEvent(const fcitx::Key &key) const {
+    if (!toggleEnabled_) {
+      return false;
+    }
     if (toggleKey_.isModifier()) {
       return key.sym() == toggleKey_.sym();
     }
@@ -247,7 +250,8 @@ private:
 
   void applySettings() {
     triggerKey_ = ResolvePrimaryKey(settings_.triggerKeys, fcitx::Key(FcitxKey_Alt_R));
-    toggleKey_ = ResolvePrimaryKey(settings_.toggleKeys, fcitx::Key("Alt+z"));
+    toggleEnabled_ = !settings_.toggleKeys.empty();
+    toggleKey_ = toggleEnabled_ ? ResolvePrimaryKey(settings_.toggleKeys, fcitx::Key()) : fcitx::Key();
     const auto &host = settings_.host.empty() ? std::string(kDefaultHost) : settings_.host;
     asrBaseUrl_ = std::string("http://") + host + ":" + std::to_string(settings_.port);
   }
@@ -450,7 +454,8 @@ private:
   fcitx::Instance *instance_;
   VoiceTypeSettings settings_;
   fcitx::Key triggerKey_ = fcitx::Key(FcitxKey_Alt_R);
-  fcitx::Key toggleKey_ = fcitx::Key("Alt+z");
+  fcitx::Key toggleKey_ = fcitx::Key();
+  bool toggleEnabled_ = false;
   bool togglePressed_ = false;
   mutable std::unique_ptr<VoiceTypeConfig> uiConfig_;
   std::string asrBaseUrl_ = "http://127.0.0.1:8789";

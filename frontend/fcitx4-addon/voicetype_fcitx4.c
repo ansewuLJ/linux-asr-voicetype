@@ -45,7 +45,8 @@ static const char *kDefaultHost = "127.0.0.1";
 static const int kDefaultPort = 8789;
 static const char *kDefaultHoldKey = "ALT_R";
 static const char *kDefaultHoldModifier = "DISABLED";
-static const char *kDefaultToggleKey = "ALT_z";
+static const char *kDefaultToggleKey = "";
+static const char *kDisabledToggleLabel = "(disabled)";
 static const int kRecordModeIdle = 0;
 static const int kRecordModeHold = 1;
 static const int kRecordModeToggle = 2;
@@ -647,7 +648,7 @@ static void *voicetype_create(FcitxInstance *instance) {
     FcitxInstanceRegisterInputUnFocusHook(instance, (FcitxIMEventHook){on_input_unfocus, self});
     FcitxLog(INFO, "voicetype-fcitx4: loaded (hold=%s, toggle=%s, asr=%s:%d)",
              self->hold_name[0] ? self->hold_name : kDefaultHoldKey,
-             self->toggle_hotkey[0].desc ? self->toggle_hotkey[0].desc : kDefaultToggleKey,
+             self->toggle_hotkey[0].desc ? self->toggle_hotkey[0].desc : kDisabledToggleLabel,
              self->host,
              self->port);
     return self;

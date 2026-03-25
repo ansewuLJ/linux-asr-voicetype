@@ -34,9 +34,9 @@ LongDescription=用于单修饰键按住录音。设置后优先于 Hold-To-Talk
 
 [VoiceType/ToggleKey]
 Type=Hotkey
-DefaultValue=ALT_z
+DefaultValue=
 Description=Toggle Recording Key
-LongDescription=按一次开始，再按一次结束并上屏。
+LongDescription=按一次开始，再按一次结束并上屏。默认关闭，可按需手动设置。
 
 [DescriptionFile]
 LocaleDomain=fcitx
