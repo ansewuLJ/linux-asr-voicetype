@@ -135,12 +135,12 @@ systemctl --user enable --now voicetype-ui.service
 ```
 
 推理服务管理界面：
-![alt text](asset/infer-ui-zh.png)
+![alt text](assets/infer-ui-zh.png)
 
 初次使用先选定后端，然后保存配置后启动服务即可。
 
 控制界面：
-![alt text](asset/control-ui-zh.png)
+![alt text](assets/control-ui-zh.png)
 
 **接入 Fcitx（建议检查）**
 
@@ -149,7 +149,7 @@ systemctl --user enable --now voicetype-ui.service
 - 默认热键：`按住右 ALT` 录音，`松开` 后开始识别
 - `Toggle Recording Key`（按一次开始、再按一次结束）默认关闭/为空；如需长语音录入，请自行设置一个顺手的快捷键
 
-![alt text](asset/fcitx.png)
+![alt text](assets/fcitx.png)
 
 部署后自检：
 - 打开 `http://127.0.0.1:8790`，确认推理服务状态在线

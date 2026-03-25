@@ -135,12 +135,12 @@ systemctl --user enable --now voicetype-ui.service
 ```
 
 Inference manager UI:
-![alt text](asset/infer-ui.png)
+![alt text](assets/infer-ui.png)
 
 On first use, select backend, save config, then start inference service.
 
 Controller UI:
-![alt text](asset/control-ui.png)
+![alt text](assets/control-ui.png)
 
 **Fcitx Integration (Recommended Checks)**
 
@@ -149,7 +149,7 @@ Controller UI:
 - Default hotkey: hold `Right ALT` to record, release to start recognition
 - `Toggle Recording Key` (press once to start, press again to stop) is disabled/empty by default; for long dictation, set a custom hotkey manually
 
-![alt text](asset/fcitx.png)
+![alt text](assets/fcitx.png)
 
 Post-deployment self-check:
 - Open `http://127.0.0.1:8790` and confirm inference service status is online
