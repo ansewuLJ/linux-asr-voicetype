@@ -216,6 +216,8 @@ systemctl --user stop asr-manager-ui.service     # 停止服务
 
 推理服务（`8789`）由管理 UI 统一启动/重载，不需要单独长期维护一个第三套操作流程。
 
+如需清理当前用户下的全部相关服务与配置，可执行：`./scripts/uninstall_user_services.sh`
+
 ---
 
 ## ✦ 相关文件
