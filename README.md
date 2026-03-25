@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/ansewulj/linux-asr-voicetype/stargazers"><img src="https://img.shields.io/github/stars/ansewulj/linux-asr-voicetype?style=flat-square" alt="GitHub Stars"></a>
-  <a href="https://github.com/ansewulj/linux-asr-voicetype/releases"><img src="https://img.shields.io/github/v/release/ansewulj/linux-asr-voicetype?style=flat-square" alt="Latest Release"></a>
+  <a href="https://github.com/ansewulj/linux-asr-voicetype/releases"><img src="https://img.shields.io/github/v/tag/ansewulj/linux-asr-voicetype?style=flat-square" alt="Latest Release"></a>
   <a href="https://github.com/ansewulj/linux-asr-voicetype/releases"><img src="https://img.shields.io/github/downloads/ansewulj/linux-asr-voicetype/total?style=flat-square" alt="Downloads"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/ansewulj/linux-asr-voicetype?style=flat-square" alt="License"></a>
 </p>
