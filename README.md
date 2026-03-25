@@ -1,31 +1,33 @@
 # linux-asr-voicetype
 
-这是一个面向 Linux 桌面的本地离线语音输入插件（可通过 Fcitx 或全局热键接入），默认本机推理，也支持把推理服务部署到局域网服务器。
+[中文说明 (README_ZH.md)](README_ZH.md)
 
-## ✦ 特性
+A local offline speech input plugin for Linux desktop environments (integrates with Fcitx or global hotkeys). It supports local inference by default, and also supports deploying inference services to a LAN server.
 
-- 完全可本地部署，支持 CPU/CUDA，占用内存/显存 2GB+
-- 基于[Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B)模型，在中文与中英混合输入场景中表现优秀
-- 在测试环境下延迟较低（例如十几秒音频可在 2 秒内完成识别，具体取决于硬件与模型）
-- 支持自定义热词，降低错字概率
-- 支持接入后处理文本模型，进一步优化识别效果
-- 支持 Fcitx4/Fcitx5 引擎接入，也支持全局热键模式
-- 支持 Transformers / OpenVINO 两种推理后端
-- 可通过 UI 界面管理推理服务和接入配置
+## ✦ Features
 
-## ✦ 默认端口
-- 推理服务管理面：`8788`
-- 推理面：`8789`
-- 控制面：`8790`
+- Fully local deployment, supports CPU/CUDA, with typical memory/VRAM usage around 2GB+
+- Powered by [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B), with strong performance for Chinese and mixed Chinese-English input
+- Low latency in test environments (for example, speech of around 10+ seconds can be recognized in about 2 seconds, depending on hardware/model)
+- Supports custom hotwords to reduce recognition mistakes
+- Supports optional post-processing text models for better output quality
+- Supports Fcitx4/Fcitx5 engine integration and global hotkey mode
+- Supports both Transformers and OpenVINO inference backends
+- Inference services and integration can be managed through web UIs
+
+## ✦ Default Ports
+- Inference manager UI: `8788`
+- Inference API: `8789`
+- Controller UI: `8790`
 
 ---
 
-## ✦ 系统依赖安装
+## ✦ System Dependencies
 
-### 判断 Fcitx 版本
+### Check Fcitx Version
 ```bash
-fcitx --version  # 显示版本号则为 Fcitx4
-fcitx5 --version # 显示版本号则为 Fcitx5
+fcitx --version  # if version appears, this is Fcitx4
+fcitx5 --version # if version appears, this is Fcitx5
 ```
 
 ### Debian/Ubuntu
@@ -82,157 +84,157 @@ fcitx-remote -r
 
 ---
 
-## ✦ 服务部署
-依赖 uv，先按 uv 官方文档安装：`https://docs.astral.sh/uv/getting-started/installation/`
+## ✦ Service Deployment
+This project depends on uv. Install uv first from official docs: `https://docs.astral.sh/uv/getting-started/installation/`
 
-### 单机部署
+### Single-Machine Deployment
 
 ```bash
-# 1. Python 依赖
+# 1. Python dependencies
 cd linux-asr-voicetype
-# 先确保 uv 已安装（官方安装文档见上）
-# uv sync 会自动创建并使用项目虚拟环境
+# Ensure uv is installed first (official link above)
+# uv sync auto-creates and uses the project virtual environment
 uv sync --all-extras
-# 需要在当前 shell 里直接运行 python/pip 时，手动激活
+# Activate only if you want to run python/pip directly in current shell
 source .venv/bin/activate
 
-# 2. 下载模型（二选一）
+# 2. Download model (choose one)
 
-# OpenVINO（CPU 推荐）
+# OpenVINO (recommended for CPU)
 uv run voicetype model download dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO \
   --local-dir models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
 
-# OpenVINO 必做：生成 prompt_template.json 和 mel_filters.npy
+# Required for OpenVINO: generate prompt_template.json and mel_filters.npy
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
 uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
 
-# 或 Transformers（CPU/GPU）
+# Or Transformers (CPU/GPU)
 uv run voicetype model download Qwen/Qwen3-ASR-0.6B \
   --local-dir models/Qwen3-ASR-0.6B
 
-# 3. 安装 systemd 服务
+# 3. Install systemd services
 ./scripts/install_controller_systemd.sh --ui-host 127.0.0.1 --ui-port 8790
 ./scripts/install_infer_systemd.sh --ui-host 0.0.0.0 --ui-port 8788
 
-# 4. 启动管理面，配置推理服务
+# 4. Start manager UI and configure inference service
 systemctl --user enable --now asr-manager-ui.service
-# 打开 http://127.0.0.1:8788（本机）或 http://<本机IP>:8788（远程）配置模型路径、推理服务
+# Open http://127.0.0.1:8788 (local) or http://<local-ip>:8788 (remote)
 
-# 5. 启动控制面
+# 5. Start controller UI
 systemctl --user enable --now voicetype-ui.service
-# 打开 http://127.0.0.1:8790 管理接入、热词等
+# Open http://127.0.0.1:8790 to manage integration/hotwords
 ```
 
-推理服务管理界面：
+Inference manager UI:
 ![alt text](asset/infer-ui.png)
 
-初次使用先选定后端，然后保存配置后启动服务即可。
+On first use, select backend, save config, then start inference service.
 
-控制界面：
+Controller UI:
 ![alt text](asset/control-ui.png)
 
-**接入 Fcitx（建议检查）**
+**Fcitx Integration (Recommended Checks)**
 
-- 在 Fcitx 配置 -> 附加组件里找到 `voicetype`，确认插件已启用
-- 确认 `Host/Port` 指向控制面（默认 `127.0.0.1:8790`）
-- 默认热键：`按住右 ALT` 录音，`松开` 后开始识别
-- `Toggle Recording Key`（按一次开始、再按一次结束）默认关闭/为空；如需长语音录入，请自行设置一个顺手的快捷键
+- In Fcitx config -> Addons, find `voicetype` and confirm it is enabled
+- Ensure `Host/Port` points to controller UI (`127.0.0.1:8790` by default)
+- Default hotkey: hold `Right ALT` to record, release to start recognition
+- `Toggle Recording Key` (press once to start, press again to stop) is disabled/empty by default; for long dictation, set a custom hotkey manually
 
 ![alt text](asset/fcitx.png)
 
-部署后自检：
-- 打开 `http://127.0.0.1:8790`，确认推理服务状态在线
-- 在任意可输入文本的窗口中，按住右 `ALT` 说话，松开后确认文本可正常上屏
+Post-deployment self-check:
+- Open `http://127.0.0.1:8790` and confirm inference service status is online
+- In any text input window, hold right `ALT` to speak, release, then confirm recognized text is inserted
 
-### 双机部署
+### Two-Machine Deployment
 
-角色说明：
-- 推理节点（ASR Server）：运行推理管理 UI 与推理服务（`8788/8789`），可为无图服务器
-- 输入节点（Desktop Client）：你正在使用的桌面机，运行控制 UI 与输入法接入（`8790`）
+Role definitions:
+- Inference Node (ASR Server): runs inference manager UI + inference service (`8788/8789`), can be a headless server
+- Input Node (Desktop Client): your desktop machine, runs controller UI + input method integration (`8790`)
 
-#### 推理节点（ASR Server）
+#### Inference Node (ASR Server)
 
 ```bash
-# Python 依赖（仅推理）
+# Python dependencies (inference only)
 cd linux-asr-voicetype
-# 先确保 uv 已安装（官方安装文档见上）
-# uv sync 会自动创建并使用项目虚拟环境
+# Ensure uv is installed first (official link above)
+# uv sync auto-creates and uses the project virtual environment
 uv sync --extra infer
-# 需要在当前 shell 里直接运行 python/pip 时，手动激活
+# Activate only if you want to run python/pip directly in current shell
 source .venv/bin/activate
 
-# 下载模型（二选一）
+# Download model (choose one)
 uv run voicetype model download dseditor/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO \
   --local-dir models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO
 
-# OpenVINO 必做
+# Required for OpenVINO
 MODEL_DIR="models/Qwen3-ASR-0.6B-INT8_ASYM-OpenVINO"
 uv run python scripts/generate_prompt_template.py --model-dir "$MODEL_DIR" --out-dir "$MODEL_DIR"
 
-# 或 Transformers
+# Or Transformers
 uv run voicetype model download Qwen/Qwen3-ASR-0.6B \
   --local-dir models/Qwen3-ASR-0.6B
 
-# 安装 systemd（允许外部访问管理 UI）
+# Install systemd (allow remote access to manager UI)
 ./scripts/install_infer_systemd.sh --ui-host 0.0.0.0 --ui-port 8788
 systemctl --user enable --now asr-manager-ui.service
-# 打开 http://<推理节点IP>:8788 配置模型路径、推理服务
+# Open http://<inference-node-ip>:8788 to configure model/service
 ```
 
-#### 输入节点（Desktop Client）
+#### Input Node (Desktop Client)
 
 ```bash
-# Python 依赖（仅控制）
+# Python dependencies (controller only)
 cd linux-asr-voicetype
-# 先确保 uv 已安装（官方安装文档见上）
-# uv sync 会自动创建并使用项目虚拟环境
+# Ensure uv is installed first (official link above)
+# uv sync auto-creates and uses the project virtual environment
 uv sync --extra controller
-# 需要在当前 shell 里直接运行 python/pip 时，手动激活
+# Activate only if you want to run python/pip directly in current shell
 source .venv/bin/activate
 
-# 安装并启动
+# Install and start
 ./scripts/install_controller_systemd.sh
 systemctl --user enable --now voicetype-ui.service
-# http://127.0.0.1:8790 配置推理节点地址
+# Open http://127.0.0.1:8790 and set inference node address
 ```
 
 ---
 
-## ✦ 服务控制
+## ✦ Service Control
 
-- 控制 UI（`voicetype-ui.service`，端口 `8790`）
+- Controller UI (`voicetype-ui.service`, port `8790`)
 ```bash
-systemctl --user status voicetype-ui.service   # 查看当前状态
-systemctl --user restart voicetype-ui.service  # 重启服务（改配置后常用）
-systemctl --user stop voicetype-ui.service     # 停止服务
+systemctl --user status voicetype-ui.service   # check status
+systemctl --user restart voicetype-ui.service  # restart (common after config changes)
+systemctl --user stop voicetype-ui.service     # stop service
 ```
 
-- 管理 UI（`asr-manager-ui.service`，端口 `8788`）
+- Manager UI (`asr-manager-ui.service`, port `8788`)
 ```bash
-systemctl --user status asr-manager-ui.service   # 查看当前状态
-systemctl --user restart asr-manager-ui.service  # 重启服务（改配置后常用）
-systemctl --user stop asr-manager-ui.service     # 停止服务
+systemctl --user status asr-manager-ui.service   # check status
+systemctl --user restart asr-manager-ui.service  # restart (common after config changes)
+systemctl --user stop asr-manager-ui.service     # stop service
 ```
 
-推理服务（`8789`）由管理 UI 统一启动/重载，不需要单独长期维护一个第三套操作流程。
+Inference service (`8789`) is started/reloaded from manager UI, so no separate long-term operations guide is needed.
 
-如需清理当前用户下的全部相关服务与配置，可执行：`./scripts/uninstall_user_services.sh`
-
----
-
-## ✦ 相关文件
-
-- `~/.config/systemd/user/voicetype-ui.service`：控制 UI 的 user service 定义
-- `~/.config/systemd/user/asr-manager-ui.service`：管理 UI 的 user service 定义
-- `~/.config/systemd/user/asr-openvino.service`：OpenVINO 推理服务定义
-- `~/.config/systemd/user/asr-transformers.service`：Transformers 推理服务定义
-- `~/.config/asr-services/controller.env`：控制 UI 的 host/port 配置
-- `~/.config/asr-services/manager-ui.env`：管理 UI 的 host/port 配置
-- `~/.config/asr-services/openvino.env`：OpenVINO 推理参数配置
-- `~/.config/asr-services/transformers.env`：Transformers 推理参数配置
+To clean all related user services and configs, run: `./scripts/uninstall_user_services.sh`
 
 ---
 
-## ✦ 致谢
+## ✦ Related Files
 
-- 本仓库 OpenVINO 处理链路参考了 [QwenASRMiniTool](https://github.com/dseditor/QwenASRMiniTool) 项目。
+- `~/.config/systemd/user/voicetype-ui.service`: controller UI user service
+- `~/.config/systemd/user/asr-manager-ui.service`: manager UI user service
+- `~/.config/systemd/user/asr-openvino.service`: OpenVINO inference service
+- `~/.config/systemd/user/asr-transformers.service`: Transformers inference service
+- `~/.config/asr-services/controller.env`: controller UI host/port config
+- `~/.config/asr-services/manager-ui.env`: manager UI host/port config
+- `~/.config/asr-services/openvino.env`: OpenVINO inference config
+- `~/.config/asr-services/transformers.env`: Transformers inference config
+
+---
+
+## ✦ Acknowledgements
+
+- The OpenVINO processing pipeline in this repo references [QwenASRMiniTool](https://github.com/dseditor/QwenASRMiniTool).
