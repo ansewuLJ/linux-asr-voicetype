@@ -3,7 +3,7 @@ name = "voicetype"
 version = "0.1.0"
 description = "Independent fcitx5 + Python Qwen3-ASR input stack"
 readme = "README.md"
-authors = [{ name = "lijie", email = "lijie@users.noreply.github.com" }]
+authors = [{ name = "ansewuLJ", email = "ansewuLJ@users.noreply.github.com" }]
 requires-python = ">=3.11"
 
 # 基础依赖：控制机和推理机都需要

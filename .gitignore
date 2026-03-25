@@ -12,3 +12,6 @@ wheels/
 
 # Local model artifacts (do not commit large runtime model files)
 models/
+
+# Local benchmark scripts/data (temporarily ignored)
+benchmarks/
