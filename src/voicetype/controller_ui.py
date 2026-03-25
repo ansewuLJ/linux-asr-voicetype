@@ -398,8 +398,12 @@ def render_controller_ui() -> str:
     .card-postprocess { grid-area: postprocess; }
     .card-hotwords { grid-area: hotwords; }
     .card { border:1px solid var(--line); background:var(--card); border-radius: 14px; padding:14px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06); }
-    h1 { margin:0 0 16px; }
+    h1 { margin:0; }
     h2 { margin:0 0 10px; font-size:16px; color:#1f2937; }
+    .head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 16px; }
+    .lang-switch { display:flex; gap:8px; }
+    .lang-btn { border:1px solid #c6d0df; background:#fff; border-radius:999px; padding:6px 10px; font-size:12px; min-height:auto; }
+    .lang-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
     label { display:block; font-size:13px; color:var(--muted); margin:10px 0 6px; }
     input, select, textarea { width:100%; border:1px solid #c6d0df; background:#ffffff; color:#1f2937; border-radius:10px; padding:10px; font-size:14px; }
     textarea { min-height: 140px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; }
@@ -423,26 +427,32 @@ def render_controller_ui() -> str:
 </head>
 <body>
   <div class="wrap">
-    <h1>VoiceType 接入控制台</h1>
+    <div class="head">
+      <h1 id="titleMain">VoiceType 接入控制台</h1>
+      <div class="lang-switch">
+        <button class="lang-btn" id="langZh" type="button">简体中文</button>
+        <button class="lang-btn" id="langEn" type="button">English</button>
+      </div>
+    </div>
     <div class="layout">
       <section class="card card-connect">
-        <h2>接入配置</h2>
+        <h2 id="secConnect">接入配置</h2>
         <div class="grid" style="grid-template-columns: 1fr 1fr;">
-          <div><label>推理服务 Host</label><input id="host" placeholder="127.0.0.1" /></div>
-          <div><label>推理服务 Port</label><input id="port" type="number" placeholder="8789" /></div>
+          <div><label id="labelHost">推理服务 Host</label><input id="host" placeholder="127.0.0.1" /></div>
+          <div><label id="labelPort">推理服务 Port</label><input id="port" type="number" placeholder="8789" /></div>
         </div>
         <div class="btns"><button class="primary" id="saveConnect">保存接入配置并检查健康</button></div>
         <div id="cfgStatus" class="status"></div>
       </section>
 
       <section class="card card-hotkey">
-        <h2>全局热键（X11）</h2>
-        <div class="status">说明：建议优先使用 Fcitx5；仅在 Fcitx 不可用时再启用全局热键。</div>
+        <h2 id="secHotkey">全局热键（X11）</h2>
+        <div class="status" id="hotkeyHint">说明：建议优先使用 Fcitx5；仅在 Fcitx 不可用时再启用全局热键。</div>
         <label style="display:flex;align-items:center;gap:8px;">
           <input id="hotkeyEnabled" type="checkbox" style="width:auto;" />
-          启用全局按住说话
+          <span id="labelHotkeyEnable">启用全局按住说话</span>
         </label>
-        <label>快捷键</label>
+        <label id="labelHotkeyKey">快捷键</label>
         <select id="hotkeyKey">
           <option value="f7">f7</option>
           <option value="f8">f8</option>
@@ -462,15 +472,15 @@ def render_controller_ui() -> str:
       </section>
 
       <section class="card card-postprocess">
-        <h2>文本后处理（可选）</h2>
-        <div class="status">说明：转写结果可再经文本模型清洗。关闭时保持原始 ASR 文本；开启后失败会自动回退原文。</div>
+        <h2 id="secPostprocess">文本后处理（可选）</h2>
+        <div class="status" id="postprocessHint">说明：转写结果可再经文本模型清洗。关闭时保持原始 ASR 文本；开启后失败会自动回退原文。</div>
         <label style="display:flex;align-items:center;gap:8px;">
           <input id="ppEnabled" type="checkbox" style="width:auto;" />
-          启用后处理
+          <span id="labelPpEnable">启用后处理</span>
         </label>
-        <label>Base URL</label>
+        <label id="labelBaseUrl">Base URL</label>
         <input id="ppBaseUrl" placeholder="https://api.openai.com/v1" />
-        <label>API Key</label>
+        <label id="labelApiKey">API Key</label>
         <div class="input-with-action">
           <input id="ppApiKey" type="password" />
           <button id="togglePpApiKey" class="icon-btn" type="button" aria-label="显示或隐藏 API Key" title="显示/隐藏 API Key">
@@ -480,11 +490,11 @@ def render_controller_ui() -> str:
             </svg>
           </button>
         </div>
-        <label>Model</label>
+        <label id="labelModel">Model</label>
         <input id="ppModel" />
         <details class="advanced">
-          <summary>高级选项</summary>
-          <label>系统提示词</label>
+          <summary id="advSummary">高级选项</summary>
+          <label id="labelSystemPrompt">系统提示词</label>
           <textarea id="ppSystemPrompt" style="min-height: 120px;"></textarea>
         </details>
         <div class="btns">
@@ -495,12 +505,12 @@ def render_controller_ui() -> str:
       </section>
 
       <section class="card card-hotwords">
-        <h2>热词维护</h2>
-        <div class="status">说明：热词用于提升专有名词和术语的识别准确率，减少错别字。新增或修改词表后，点击“加载输入框热词”或“从文件加载热词”即可生效。</div>
-        <label>输入框热词（每行一个词）</label>
+        <h2 id="secHotwords">热词维护</h2>
+        <div class="status" id="hotwordsHint">说明：热词用于提升专有名词和术语的识别准确率，减少错别字。新增或修改词表后，点击“加载输入框热词”或“从文件加载热词”即可生效。</div>
+        <label id="labelHotText">输入框热词（每行一个词）</label>
         <textarea id="hotText">pytorch
 centos</textarea>
-        <label>热词文件路径</label>
+        <label id="labelHotFile">热词文件路径</label>
         <input id="hotFile" placeholder="/path/to/hotwords.txt" />
         <div class="btns">
           <button class="primary" id="loadHotText">加载输入框热词</button>
@@ -513,6 +523,171 @@ centos</textarea>
   </div>
 
   <script>
+    const I18N = {
+      zh: {
+        titleMain: 'VoiceType 接入控制台',
+        secConnect: '接入配置',
+        labelHost: '推理服务 Host',
+        labelPort: '推理服务 Port',
+        saveConnect: '保存接入配置并检查健康',
+        secHotkey: '全局热键（X11）',
+        hotkeyHint: '说明：建议优先使用 Fcitx5；仅在 Fcitx 不可用时再启用全局热键。',
+        labelHotkeyEnable: '启用全局按住说话',
+        labelHotkeyKey: '快捷键',
+        saveHotkey: '保存热键配置',
+        secPostprocess: '文本后处理（可选）',
+        postprocessHint: '说明：转写结果可再经文本模型清洗。关闭时保持原始 ASR 文本；开启后失败会自动回退原文。',
+        labelPpEnable: '启用后处理',
+        labelBaseUrl: 'Base URL',
+        labelApiKey: 'API Key',
+        labelModel: 'Model',
+        advSummary: '高级选项',
+        labelSystemPrompt: '系统提示词',
+        testPostprocess: '测试连接',
+        savePostprocess: '保存配置',
+        secHotwords: '热词维护',
+        hotwordsHint: '说明：热词用于提升专有名词和术语的识别准确率，减少错别字。新增或修改词表后，点击“加载输入框热词”或“从文件加载热词”即可生效。',
+        labelHotText: '输入框热词（每行一个词）',
+        labelHotFile: '热词文件路径',
+        loadHotText: '加载输入框热词',
+        loadHotFile: '从文件加载热词',
+        clearHot: '清空热词',
+        showApiKey: '显示 API Key',
+        hideApiKey: '隐藏 API Key',
+        ppApiKeySet: '后处理API Key：已配置',
+        ppApiKeyUnset: '后处理API Key：未配置',
+        connectOnline: '推理服务状态：在线',
+        connectOffline: '推理服务状态：离线',
+        hotkeyRunning: '运行中',
+        hotkeyStopped: '未运行',
+        phaseIdle: '空闲',
+        phaseRecording: '说话中',
+        phaseTranscribing: '识别中',
+        phaseError: '异常',
+        phaseUnknown: '未知',
+        hotkeyStatusPrefix: '状态',
+        hotkeyPhasePrefix: '阶段',
+        hotkeyKeyPrefix: '快捷键',
+        errorPrefix: '错误',
+        needTestBeforeEnable: '请先测试连接，连接通过后才能启用。',
+        ppSavedPrefix: '配置已保存',
+        ppEnabled: '后处理：已启用',
+        ppDisabled: '后处理：未启用',
+        apiKeyConfigured: 'API Key: 已配置',
+        apiKeyUnconfigured: 'API Key: 未配置',
+        testPassed: '连接测试通过，可以启用并保存。',
+        needTestBeforeToggle: '请先测试连接，连接通过后再启用。',
+        testInput: '连接测试',
+      },
+      en: {
+        titleMain: 'VoiceType Controller',
+        secConnect: 'Connection Settings',
+        labelHost: 'ASR Service Host',
+        labelPort: 'ASR Service Port',
+        saveConnect: 'Save Settings and Check Health',
+        secHotkey: 'Global Hotkey (X11)',
+        hotkeyHint: 'Tip: Prefer Fcitx5 first. Enable global hotkey only when Fcitx is not available.',
+        labelHotkeyEnable: 'Enable global hold-to-talk',
+        labelHotkeyKey: 'Hotkey',
+        saveHotkey: 'Save Hotkey Settings',
+        secPostprocess: 'Text Postprocess (Optional)',
+        postprocessHint: 'Tip: ASR text can be cleaned by a text model. Disabled keeps raw ASR output; enabled falls back to raw text on failure.',
+        labelPpEnable: 'Enable postprocess',
+        labelBaseUrl: 'Base URL',
+        labelApiKey: 'API Key',
+        labelModel: 'Model',
+        advSummary: 'Advanced Options',
+        labelSystemPrompt: 'System Prompt',
+        testPostprocess: 'Test Connection',
+        savePostprocess: 'Save Settings',
+        secHotwords: 'Hotword Management',
+        hotwordsHint: 'Tip: Hotwords improve recognition for terms and proper nouns. After updates, click "Load Hotwords from Text" or "Load Hotwords from File".',
+        labelHotText: 'Hotwords in Text Box (one per line)',
+        labelHotFile: 'Hotword File Path',
+        loadHotText: 'Load Hotwords from Text',
+        loadHotFile: 'Load Hotwords from File',
+        clearHot: 'Clear Hotwords',
+        showApiKey: 'Show API Key',
+        hideApiKey: 'Hide API Key',
+        ppApiKeySet: 'Postprocess API Key: configured',
+        ppApiKeyUnset: 'Postprocess API Key: not set',
+        connectOnline: 'ASR service status: online',
+        connectOffline: 'ASR service status: offline',
+        hotkeyRunning: 'running',
+        hotkeyStopped: 'stopped',
+        phaseIdle: 'idle',
+        phaseRecording: 'recording',
+        phaseTranscribing: 'transcribing',
+        phaseError: 'error',
+        phaseUnknown: 'unknown',
+        hotkeyStatusPrefix: 'Status',
+        hotkeyPhasePrefix: 'Phase',
+        hotkeyKeyPrefix: 'Hotkey',
+        errorPrefix: 'Error',
+        needTestBeforeEnable: 'Please test connection before enabling postprocess.',
+        ppSavedPrefix: 'Config saved',
+        ppEnabled: 'Postprocess: enabled',
+        ppDisabled: 'Postprocess: disabled',
+        apiKeyConfigured: 'API Key: configured',
+        apiKeyUnconfigured: 'API Key: not set',
+        testPassed: 'Connection test passed. You can now enable and save.',
+        needTestBeforeToggle: 'Please test connection before enabling.',
+        testInput: 'connection test',
+      },
+    };
+    const LANG_KEY = 'voicetype.ui_lang';
+    let lang = localStorage.getItem(LANG_KEY) || 'zh';
+    if (!I18N[lang]) lang = 'zh';
+
+    function t(key) {
+      return (I18N[lang] && I18N[lang][key]) || I18N.zh[key] || key;
+    }
+
+    function applyI18n() {
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      document.title = t('titleMain');
+      document.getElementById('titleMain').textContent = t('titleMain');
+      document.getElementById('secConnect').textContent = t('secConnect');
+      document.getElementById('labelHost').textContent = t('labelHost');
+      document.getElementById('labelPort').textContent = t('labelPort');
+      document.getElementById('saveConnect').textContent = t('saveConnect');
+      document.getElementById('secHotkey').textContent = t('secHotkey');
+      document.getElementById('hotkeyHint').textContent = t('hotkeyHint');
+      document.getElementById('labelHotkeyEnable').textContent = t('labelHotkeyEnable');
+      document.getElementById('labelHotkeyKey').textContent = t('labelHotkeyKey');
+      document.getElementById('saveHotkey').textContent = t('saveHotkey');
+      document.getElementById('secPostprocess').textContent = t('secPostprocess');
+      document.getElementById('postprocessHint').textContent = t('postprocessHint');
+      document.getElementById('labelPpEnable').textContent = t('labelPpEnable');
+      document.getElementById('labelBaseUrl').textContent = t('labelBaseUrl');
+      document.getElementById('labelApiKey').textContent = t('labelApiKey');
+      document.getElementById('labelModel').textContent = t('labelModel');
+      document.getElementById('advSummary').textContent = t('advSummary');
+      document.getElementById('labelSystemPrompt').textContent = t('labelSystemPrompt');
+      document.getElementById('testPostprocess').textContent = t('testPostprocess');
+      document.getElementById('savePostprocess').textContent = t('savePostprocess');
+      document.getElementById('secHotwords').textContent = t('secHotwords');
+      document.getElementById('hotwordsHint').textContent = t('hotwordsHint');
+      document.getElementById('labelHotText').textContent = t('labelHotText');
+      document.getElementById('labelHotFile').textContent = t('labelHotFile');
+      document.getElementById('loadHotText').textContent = t('loadHotText');
+      document.getElementById('loadHotFile').textContent = t('loadHotFile');
+      document.getElementById('clearHot').textContent = t('clearHot');
+      const show = ppApiKey.type === 'text';
+      togglePpApiKey.setAttribute('title', show ? t('hideApiKey') : t('showApiKey'));
+      togglePpApiKey.setAttribute('aria-label', show ? t('hideApiKey') : t('showApiKey'));
+      document.getElementById('langZh').classList.toggle('active', lang === 'zh');
+      document.getElementById('langEn').classList.toggle('active', lang === 'en');
+    }
+
+    function setLang(next) {
+      lang = next === 'en' ? 'en' : 'zh';
+      localStorage.setItem(LANG_KEY, lang);
+      applyI18n();
+      refreshHotkeyState();
+      refreshConnectHealth();
+    }
+
     const host = document.getElementById('host');
     const port = document.getElementById('port');
     const saveConnect = document.getElementById('saveConnect');
@@ -532,7 +707,11 @@ centos</textarea>
     const loadHotText = document.getElementById('loadHotText');
     const loadHotFile = document.getElementById('loadHotFile');
     const clearHot = document.getElementById('clearHot');
+    const langZh = document.getElementById('langZh');
+    const langEn = document.getElementById('langEn');
     let ppConnectionVerified = false;
+    langZh.addEventListener('click', () => setLang('zh'));
+    langEn.addEventListener('click', () => setLang('en'));
 
     async function req(url, opt) {
       const r = await fetch(url, opt);
@@ -587,12 +766,12 @@ centos</textarea>
         clearPostprocessApiKeyCache();
       }
       ppApiKey.type = 'password';
-      togglePpApiKey.setAttribute('title', '显示 API Key');
-      togglePpApiKey.setAttribute('aria-label', '显示 API Key');
+      togglePpApiKey.setAttribute('title', t('showApiKey'));
+      togglePpApiKey.setAttribute('aria-label', t('showApiKey'));
       ppConnectionVerified = !!c.postprocess_enabled;
       await refreshHotkeyState();
       await refreshConnectHealth();
-      setStatus('ppStatus', s.postprocess_api_key_set ? '后处理API Key：已配置' : '后处理API Key：未配置', true);
+      setStatus('ppStatus', s.postprocess_api_key_set ? t('ppApiKeySet') : t('ppApiKeyUnset'), true);
     }
 
     function markPostprocessDirty() {
@@ -600,9 +779,9 @@ centos</textarea>
     }
 
     function connectStatusText(ok, err='') {
-      if (ok) return '推理服务状态：在线';
-      if (!err) return '推理服务状态：离线';
-      return '推理服务状态：离线\\n' + err;
+      if (ok) return t('connectOnline');
+      if (!err) return t('connectOffline');
+      return t('connectOffline') + '\\n' + err;
     }
 
     async function refreshConnectHealth() {
@@ -610,18 +789,23 @@ centos</textarea>
         const out = await req('/api/connect-health');
         setStatus('cfgStatus', connectStatusText(!!out.health_ok, out.health_error || ''), !!out.health_ok);
       } catch (e) {
-        setStatus('cfgStatus', '推理服务状态：离线\\n' + String(e), false);
+        setStatus('cfgStatus', t('connectOffline') + '\\n' + String(e), false);
       }
     }
 
     async function refreshHotkeyState() {
       try {
         const hk = await req('/api/hotkey/state');
-        const phaseMap = { idle: '空闲', recording: '说话中', transcribing: '识别中', error: '异常' };
-        let msg = '状态: ' + (hk.running ? '运行中' : '未运行');
-        msg += ' | 阶段: ' + (phaseMap[hk.phase] || hk.phase || '未知');
-        msg += ' | 快捷键: ' + (hk.hotkey || 'right_alt');
-        if (hk.last_error) msg += '\\n错误: ' + hk.last_error;
+        const phaseMap = {
+          idle: t('phaseIdle'),
+          recording: t('phaseRecording'),
+          transcribing: t('phaseTranscribing'),
+          error: t('phaseError'),
+        };
+        let msg = t('hotkeyStatusPrefix') + ': ' + (hk.running ? t('hotkeyRunning') : t('hotkeyStopped'));
+        msg += ' | ' + t('hotkeyPhasePrefix') + ': ' + (phaseMap[hk.phase] || hk.phase || t('phaseUnknown'));
+        msg += ' | ' + t('hotkeyKeyPrefix') + ': ' + (hk.hotkey || 'right_alt');
+        if (hk.last_error) msg += '\\n' + t('errorPrefix') + ': ' + hk.last_error;
         setStatus('hotkeyStatus', msg, !hk.last_error);
       } catch (e) {
         setStatus('hotkeyStatus', String(e), false);
@@ -637,7 +821,7 @@ centos</textarea>
         });
         setStatus('cfgStatus', connectStatusText(!!out.health_ok, out.health_error || ''), !!out.health_ok);
       } catch (e) {
-        setStatus('cfgStatus', '推理服务状态：离线\\n' + String(e), false);
+        setStatus('cfgStatus', t('connectOffline') + '\\n' + String(e), false);
       }
     });
 
@@ -659,7 +843,7 @@ centos</textarea>
     savePostprocess.addEventListener('click', async () => {
       try {
         if (ppEnabled.checked && !ppConnectionVerified) {
-          throw new Error('请先测试连接，连接通过后才能启用。');
+          throw new Error(t('needTestBeforeEnable'));
         }
         const body = {
           enabled: !!ppEnabled.checked,
@@ -678,7 +862,7 @@ centos</textarea>
         } else if (!out.api_key_set) {
           clearPostprocessApiKeyCache();
         }
-        setStatus('ppStatus', '配置已保存\\n' + (out.enabled ? '后处理：已启用' : '后处理：未启用') + '\\n' + (out.api_key_set ? 'API Key: 已配置' : 'API Key: 未配置'), true);
+        setStatus('ppStatus', t('ppSavedPrefix') + '\\n' + (out.enabled ? t('ppEnabled') : t('ppDisabled')) + '\\n' + (out.api_key_set ? t('apiKeyConfigured') : t('apiKeyUnconfigured')), true);
       } catch (e) {
         setStatus('ppStatus', String(e), false);
       }
@@ -693,11 +877,11 @@ centos</textarea>
             base_url: ppBaseUrl.value || '',
             model: ppModel.value || '',
             api_key: ppApiKey.value || '',
-            text: '连接测试'
+            text: t('testInput')
           })
         });
         ppConnectionVerified = true;
-        setStatus('ppStatus', '连接测试通过，可以启用并保存。', true);
+        setStatus('ppStatus', t('testPassed'), true);
       } catch (e) {
         ppConnectionVerified = false;
         setStatus('ppStatus', String(e), false);
@@ -710,14 +894,14 @@ centos</textarea>
     ppSystemPrompt.addEventListener('input', markPostprocessDirty);
     ppEnabled.addEventListener('change', () => {
       if (ppEnabled.checked && !ppConnectionVerified) {
-        setStatus('ppStatus', '请先测试连接，连接通过后再启用。', false);
+        setStatus('ppStatus', t('needTestBeforeToggle'), false);
       }
     });
     togglePpApiKey.addEventListener('click', () => {
       const show = ppApiKey.type === 'password';
       ppApiKey.type = show ? 'text' : 'password';
-      togglePpApiKey.setAttribute('title', show ? '隐藏 API Key' : '显示 API Key');
-      togglePpApiKey.setAttribute('aria-label', show ? '隐藏 API Key' : '显示 API Key');
+      togglePpApiKey.setAttribute('title', show ? t('hideApiKey') : t('showApiKey'));
+      togglePpApiKey.setAttribute('aria-label', show ? t('hideApiKey') : t('showApiKey'));
     });
 
     loadHotText.addEventListener('click', async () => {
@@ -765,6 +949,7 @@ centos</textarea>
     hotFile.addEventListener('input', persistHotwordFilePath);
     restoreHotwordFilePath();
 
+    applyI18n();
     refreshState();
     setInterval(refreshHotkeyState, 1000);
   </script>

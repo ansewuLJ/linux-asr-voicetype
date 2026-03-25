@@ -241,6 +241,7 @@ systemctl --user stop asr-manager-ui.service     # 停止服务
 - `~/.config/asr-services/manager-ui.env`：管理 UI 的 host/port 配置
 - `~/.config/asr-services/openvino.env`：OpenVINO 推理参数配置
 - `~/.config/asr-services/transformers.env`：Transformers 推理参数配置
+- `~/.config/voicetype/runtime.json`：控制端运行时配置（ASR host/port、热键、后处理配置，含 `postprocess_system_prompt`）
 
 ---
 

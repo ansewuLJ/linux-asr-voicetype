@@ -241,6 +241,7 @@ To clean all related user services and configs, run: `./scripts/uninstall_user_s
 - `~/.config/asr-services/manager-ui.env`: manager UI host/port config
 - `~/.config/asr-services/openvino.env`: OpenVINO inference config
 - `~/.config/asr-services/transformers.env`: Transformers inference config
+- `~/.config/voicetype/runtime.json`: controller runtime config (ASR host/port, hotkey, postprocess settings including `postprocess_system_prompt`)
 
 ---
 

@@ -20,6 +20,7 @@ rm -f "$HOME/.config/systemd/user/asr-manager-ui.service"
 rm -f "$HOME/.config/systemd/user/asr-openvino.service"
 rm -f "$HOME/.config/systemd/user/asr-transformers.service"
 rm -rf "$HOME/.config/asr-services"
+rm -rf "$HOME/.config/voicetype"
 
 log "3/3 重新加载 systemd..."
 systemctl --user daemon-reload

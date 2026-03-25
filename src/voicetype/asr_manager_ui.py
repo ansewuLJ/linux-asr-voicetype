@@ -211,8 +211,12 @@ def render_ui() -> str:
     * { box-sizing: border-box; }
     body { margin:0; background:#f5f7fb; color:#1f2937; font-family: \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height:1.45; }
     .wrap { max-width: 1040px; margin: 24px auto; padding: 0 16px 28px; }
-    h2 { margin: 0 0 14px; }
+    h2 { margin: 0; }
     h3 { margin: 0 0 12px; }
+    .head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 0 0 14px; }
+    .lang-switch { display:flex; gap:8px; }
+    .lang-btn { border:1px solid #c7d2e5; background:#fff; border-radius:999px; padding:6px 10px; min-height:auto; font-size:12px; }
+    .lang-btn.active { background:#0f6fff; border-color:#0f6fff; color:#fff; }
     .card { background:#fff; border:1px solid #dbe3ef; border-radius:12px; padding:18px; margin-bottom:16px; box-shadow:0 1px 2px rgba(15, 23, 42, 0.04); }
     .row { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; margin-bottom:14px; }
     .row.one { grid-template-columns: minmax(0, 1fr); }
@@ -241,52 +245,160 @@ def render_ui() -> str:
 </head>
 <body>
   <div class=\"wrap\">
-    <h2>ASR 推理服务管理</h2>
+    <div class=\"head\">
+      <h2 id=\"title\">ASR 推理服务管理</h2>
+      <div class=\"lang-switch\">
+        <button class=\"lang-btn\" id=\"langZh\" type=\"button\">简体中文</button>
+        <button class=\"lang-btn\" id=\"langEn\" type=\"button\">English</button>
+      </div>
+    </div>
 
     <div class=\"card\">
-      <div class=\"row one\"><div class=\"field\"><label>后端</label>
+      <div class=\"row one\"><div class=\"field\"><label id=\"labelBackend\">后端</label>
         <select id=\"backend\">
           <option value=\"transformers\">transformers</option>
           <option value=\"openvino\">openvino</option>
         </select>
       </div></div>
       <div class=\"row\">
-        <div class=\"field\"><label>模型 ID / 路径</label><input id=\"model\" placeholder=\"Qwen/Qwen3-ASR-0.6B 或本地路径\"></div>
+        <div class=\"field\"><label id=\"labelModel\">模型 ID / 路径</label><input id=\"model\" placeholder=\"Qwen/Qwen3-ASR-0.6B 或本地路径\"></div>
       </div>
       <div class=\"row\">
-        <div class=\"field\"><label>Host</label><input id=\"host\" placeholder=\"127.0.0.1\"></div>
-        <div class=\"field\"><label>Port</label><input id=\"port\" placeholder=\"8789\"></div>
+        <div class=\"field\"><label id=\"labelHost\">Host</label><input id=\"host\" placeholder=\"127.0.0.1\"></div>
+        <div class=\"field\"><label id=\"labelPort\">Port</label><input id=\"port\" placeholder=\"8789\"></div>
       </div>
       <div class=\"row\">
-        <div class=\"field\"><label>Device</label><select id=\"device\"></select></div>
-        <div class=\"field\"><label>HF 镜像</label><input id=\"hf\" placeholder=\"https://hf-mirror.com\"></div>
+        <div class=\"field\"><label id=\"labelDevice\">Device</label><select id=\"device\"></select></div>
+        <div class=\"field\"><label id=\"labelHf\">HF 镜像</label><input id=\"hf\" placeholder=\"https://hf-mirror.com\"></div>
       </div>
       <div class=\"row\" id=\"batchField\">
-        <div class=\"field\"><label>最大推理批大小（仅 Transformers）</label><input id=\"batch\" type=\"number\" min=\"1\" value=\"1\" placeholder=\"1\"></div>
+        <div class=\"field\"><label id=\"labelBatch\">最大推理批大小（仅 Transformers）</label><input id=\"batch\" type=\"number\" min=\"1\" value=\"1\" placeholder=\"1\"></div>
       </div>
       <div class=\"actions\">
-        <button class=\"primary\" onclick=\"saveConfig()\">保存配置</button>
-        <button onclick=\"startBackend()\">启动推理服务</button>
-        <button onclick=\"restartBackend()\">重启推理服务</button>
-        <button class=\"danger\" onclick=\"stopBackend()\">停止推理服务</button>
-        <button onclick=\"refreshAll()\">刷新</button>
+        <button class=\"primary\" onclick=\"saveConfig()\" id=\"btnSave\">保存配置</button>
+        <button onclick=\"startBackend()\" id=\"btnStart\">启动推理服务</button>
+        <button onclick=\"restartBackend()\" id=\"btnRestart\">重启推理服务</button>
+        <button class=\"danger\" onclick=\"stopBackend()\" id=\"btnStop\">停止推理服务</button>
+        <button onclick=\"refreshAll()\" id=\"btnRefresh\">刷新</button>
       </div>
       <div id=\"topStatus\"></div>
-      <div class=\"muted\">首次使用：先保存配置再启动服务；已启动后修改参数：保存后需重载推理服务。</div>
+      <div class=\"muted\" id=\"firstUseHint\">首次使用：先保存配置再启动服务；已启动后修改参数：保存后需重载推理服务。</div>
     </div>
 
     <div class=\"card\">
-      <h3>服务状态与操作</h3>
+      <h3 id=\"serviceSectionTitle\">服务状态与操作</h3>
       <div id=\"serviceCards\"></div>
     </div>
 
     <div class=\"card\">
-      <h3>日志输出</h3>
+      <h3 id=\"logSectionTitle\">日志输出</h3>
       <pre id=\"logs\"></pre>
     </div>
   </div>
 
   <script>
+    const I18N = {
+      zh: {
+        title: 'ASR 推理服务管理',
+        labelBackend: '后端',
+        labelModel: '模型 ID / 路径',
+        labelHost: 'Host',
+        labelPort: 'Port',
+        labelDevice: 'Device',
+        labelHf: 'HF 镜像',
+        labelBatch: '最大推理批大小（仅 Transformers）',
+        btnSave: '保存配置',
+        btnStart: '启动推理服务',
+        btnRestart: '重启推理服务',
+        btnStop: '停止推理服务',
+        btnRefresh: '刷新',
+        firstUseHint: '首次使用：先保存配置再启动服务；已启动后修改参数：保存后需重载推理服务。',
+        serviceSectionTitle: '服务状态与操作',
+        logSectionTitle: '日志输出',
+        modelPlaceholder: 'Qwen/Qwen3-ASR-0.6B 或本地路径',
+        hfPlaceholder: 'https://hf-mirror.com',
+        statusRunning: '运行中',
+        statusStopped: '未运行',
+        reloadOk: 'reload success',
+        configSaved: '配置已保存',
+        backendStarted: '推理服务已启动',
+        backendRestarted: '推理服务已重启',
+        backendStopped: '推理服务已停止',
+        viewLogs: '查看日志',
+      },
+      en: {
+        title: 'ASR Inference Service Manager',
+        labelBackend: 'Backend',
+        labelModel: 'Model ID / Path',
+        labelHost: 'Host',
+        labelPort: 'Port',
+        labelDevice: 'Device',
+        labelHf: 'HF Mirror',
+        labelBatch: 'Max Inference Batch Size (Transformers only)',
+        btnSave: 'Save Config',
+        btnStart: 'Start Inference Service',
+        btnRestart: 'Restart Inference Service',
+        btnStop: 'Stop Inference Service',
+        btnRefresh: 'Refresh',
+        firstUseHint: 'First run: save config first, then start service. For running service, save changes and reload inference service.',
+        serviceSectionTitle: 'Service Status and Actions',
+        logSectionTitle: 'Logs',
+        modelPlaceholder: 'Qwen/Qwen3-ASR-0.6B or local path',
+        hfPlaceholder: 'https://hf-mirror.com',
+        statusRunning: 'Running',
+        statusStopped: 'Stopped',
+        reloadOk: 'reload success',
+        configSaved: 'Config saved',
+        backendStarted: 'Inference service started',
+        backendRestarted: 'Inference service restarted',
+        backendStopped: 'Inference service stopped',
+        viewLogs: 'View Logs',
+      },
+    };
+    const LANG_KEY = 'voicetype.ui_lang';
+    let lang = localStorage.getItem(LANG_KEY) || 'zh';
+    if (!I18N[lang]) lang = 'zh';
+
+    function t(key) {
+      return (I18N[lang] && I18N[lang][key]) || I18N.zh[key] || key;
+    }
+
+    function applyI18n() {
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      document.title = t('title');
+      document.getElementById('title').textContent = t('title');
+      document.getElementById('labelBackend').textContent = t('labelBackend');
+      document.getElementById('labelModel').textContent = t('labelModel');
+      document.getElementById('labelHost').textContent = t('labelHost');
+      document.getElementById('labelPort').textContent = t('labelPort');
+      document.getElementById('labelDevice').textContent = t('labelDevice');
+      document.getElementById('labelHf').textContent = t('labelHf');
+      document.getElementById('labelBatch').textContent = t('labelBatch');
+      document.getElementById('btnSave').textContent = t('btnSave');
+      document.getElementById('btnStart').textContent = t('btnStart');
+      document.getElementById('btnRestart').textContent = t('btnRestart');
+      document.getElementById('btnStop').textContent = t('btnStop');
+      document.getElementById('btnRefresh').textContent = t('btnRefresh');
+      document.getElementById('firstUseHint').textContent = t('firstUseHint');
+      document.getElementById('serviceSectionTitle').textContent = t('serviceSectionTitle');
+      document.getElementById('logSectionTitle').textContent = t('logSectionTitle');
+      document.getElementById('model').setAttribute('placeholder', t('modelPlaceholder'));
+      document.getElementById('hf').setAttribute('placeholder', t('hfPlaceholder'));
+
+      document.getElementById('langZh').classList.toggle('active', lang === 'zh');
+      document.getElementById('langEn').classList.toggle('active', lang === 'en');
+    }
+
+    function setLang(next) {
+      lang = next === 'en' ? 'en' : 'zh';
+      localStorage.setItem(LANG_KEY, lang);
+      applyI18n();
+      refreshAll();
+    }
+
+    document.getElementById('langZh').addEventListener('click', () => setLang('zh'));
+    document.getElementById('langEn').addEventListener('click', () => setLang('en'));
+
     const backend = document.getElementById('backend');
     const model = document.getElementById('model');
     const host = document.getElementById('host');
@@ -334,7 +446,7 @@ def render_ui() -> str:
     async function reloadSystemd() {
       try {
         const out = await req('/api/systemd/reload', { method:'POST' });
-        setTop('reload success: ' + out.timestamp, true);
+        setTop(t('reloadOk') + ': ' + out.timestamp, true);
       } catch (e) { setTop(String(e), false); }
     }
 
@@ -356,7 +468,7 @@ def render_ui() -> str:
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify(payload)
         });
-        setTop('配置已保存', true);
+        setTop(t('configSaved'), true);
         await refreshAll();
       } catch (e) { setTop(String(e), false); }
     }
@@ -364,7 +476,7 @@ def render_ui() -> str:
     async function startBackend() {
       try {
         await req('/api/services/' + backendService(backend.value) + '/start', { method:'POST' });
-        setTop('推理服务已启动', true);
+        setTop(t('backendStarted'), true);
         await refreshAll();
       } catch (e) { setTop(String(e), false); }
     }
@@ -372,7 +484,7 @@ def render_ui() -> str:
     async function restartBackend() {
       try {
         await req('/api/services/' + backendService(backend.value) + '/restart', { method:'POST' });
-        setTop('推理服务已重启', true);
+        setTop(t('backendRestarted'), true);
         await refreshAll();
       } catch (e) { setTop(String(e), false); }
     }
@@ -380,7 +492,7 @@ def render_ui() -> str:
     async function stopBackend() {
       try {
         await req('/api/services/' + backendService(backend.value) + '/stop', { method:'POST' });
-        setTop('推理服务已停止', true);
+        setTop(t('backendStopped'), true);
         await refreshAll();
       } catch (e) { setTop(String(e), false); }
     }
@@ -404,15 +516,15 @@ def render_ui() -> str:
     async function refreshAll() {
       try {
         const cfg = await req('/api/config');
-        const t = cfg.transformers, o = cfg.openvino, s = cfg.stack;
+        const cfgT = cfg.transformers, cfgO = cfg.openvino, s = cfg.stack;
         const b = (s.BACKEND || 'transformers');
         backend.value = b;
-        const c = b === 'openvino' ? o : t;
+        const c = b === 'openvino' ? cfgO : cfgT;
         host.value = c.HOST || '';
         port.value = c.PORT || '';
         model.value = c.MODEL || '';
         hf.value = c.HF_ENDPOINT || '';
-        batch.value = String(t.MAX_INFERENCE_BATCH_SIZE || '1');
+        batch.value = String(cfgT.MAX_INFERENCE_BATCH_SIZE || '1');
         toggleBatchField();
         await loadDeviceOptions(c.DEVICE || '');
 
@@ -423,12 +535,12 @@ def render_ui() -> str:
           const card = document.createElement('div');
           card.className = 'svc';
           const activeCls = svc.active ? 'badge' : 'badge off';
-          const activeText = svc.active ? '运行中' : '未运行';
+          const activeText = svc.active ? t('statusRunning') : t('statusStopped');
           card.innerHTML = `
             <div class=\"svc-title\"><b>${svc.name}</b><span class=\"${activeCls}\">${activeText}</span></div>
             <div>active: <b>${svc.active_state}</b> | enabled: <b>${svc.enabled_state}</b></div>
             <div style=\"margin-top:8px\">
-              <button onclick=\"viewLogs('${svc.name}')\">查看日志</button>
+              <button onclick=\"viewLogs('${svc.name}')\">${t('viewLogs')}</button>
             </div>`;
           box.appendChild(card);
         }
@@ -448,6 +560,7 @@ def render_ui() -> str:
       await loadDeviceOptions(c.DEVICE || '');
     });
 
+    applyI18n();
     refreshAll();
   </script>
 </body>
