@@ -1,15 +1,15 @@
-# linux-asr-voicetype
+<h1 align="center">linux-asr-voicetype</h1>
 
-Linux 桌面的本地离线语音输入方案。
+<p align="center">Linux 桌面的本地离线语音输入方案。</p>
 
-[![GitHub Stars](https://img.shields.io/github/stars/ansewuLJ/linux-asr-voicetype?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/stargazers)
-[![Latest Release](https://img.shields.io/github/v/release/ansewuLJ/linux-asr-voicetype?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/releases)
-[![Downloads](https://img.shields.io/github/downloads/ansewuLJ/linux-asr-voicetype/total?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/releases)
-[![License](https://img.shields.io/github/license/ansewuLJ/linux-asr-voicetype?style=flat-square)](LICENSE)
+<p align="center">
+  <a href="https://github.com/ansewuLJ/linux-asr-voicetype/stargazers"><img src="https://img.shields.io/github/stars/ansewuLJ/linux-asr-voicetype?style=flat-square" alt="GitHub Stars"></a>
+  <a href="https://github.com/ansewuLJ/linux-asr-voicetype/releases"><img src="https://img.shields.io/github/v/release/ansewuLJ/linux-asr-voicetype?style=flat-square" alt="Latest Release"></a>
+  <a href="https://github.com/ansewuLJ/linux-asr-voicetype/releases"><img src="https://img.shields.io/github/downloads/ansewuLJ/linux-asr-voicetype/total?style=flat-square" alt="Downloads"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/ansewuLJ/linux-asr-voicetype?style=flat-square" alt="License"></a>
+</p>
 
-**[Stars](https://github.com/ansewuLJ/linux-asr-voicetype/stargazers) | [Release](https://github.com/ansewuLJ/linux-asr-voicetype/releases) | [Downloads](https://github.com/ansewuLJ/linux-asr-voicetype/releases) | [License](LICENSE)**
-
-[English](README.md) | **简体中文**
+<p align="center"><a href="README.md">English</a> | <strong>简体中文</strong></p>
 
 这是一个面向 Linux 桌面的本地离线语音输入插件（可通过 Fcitx 或全局热键接入），默认本机推理，也支持把推理服务部署到局域网服务器。
 
