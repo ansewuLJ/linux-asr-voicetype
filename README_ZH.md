@@ -135,12 +135,12 @@ systemctl --user enable --now voicetype-ui.service
 ```
 
 推理服务管理界面：
-![alt text](asset/infer-ui.png)
+![alt text](asset/infer-ui-zh.png)
 
 初次使用先选定后端，然后保存配置后启动服务即可。
 
 控制界面：
-![alt text](asset/control-ui.png)
+![alt text](asset/control-ui-zh.png)
 
 **接入 Fcitx（建议检查）**
 
