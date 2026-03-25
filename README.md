@@ -44,7 +44,8 @@ fcitx5 --version # if version appears, this is Fcitx5
 **Fcitx5**
 ```bash
 sudo apt install alsa-utils xdotool build-essential cmake pkg-config \
-  libcurl4-openssl-dev nlohmann-json3-dev fcitx5-dev
+  libcurl4-openssl-dev nlohmann-json3-dev \
+  libfcitx5core-dev libfcitx5config-dev libfcitx5utils-dev fcitx5-modules-dev
 
 cd frontend/fcitx5-addon
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
@@ -52,6 +53,8 @@ cmake --build build -j$(nproc)
 sudo cmake --install build
 fcitx5-remote -r
 ```
+
+If you are switching from Fcitx4 to Fcitx5, run `im-config -n fcitx5` and re-login once.
 
 **Fcitx4**
 ```bash
