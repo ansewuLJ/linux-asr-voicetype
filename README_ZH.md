@@ -1,6 +1,15 @@
 # linux-asr-voicetype
 
-[English README](README.md)
+Linux 桌面的本地离线语音输入方案。
+
+[![GitHub Stars](https://img.shields.io/github/stars/ansewuLJ/linux-asr-voicetype?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/stargazers)
+[![Latest Release](https://img.shields.io/github/v/release/ansewuLJ/linux-asr-voicetype?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/releases)
+[![Downloads](https://img.shields.io/github/downloads/ansewuLJ/linux-asr-voicetype/total?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/releases)
+[![License](https://img.shields.io/github/license/ansewuLJ/linux-asr-voicetype?style=flat-square)](LICENSE)
+
+**[Stars](https://github.com/ansewuLJ/linux-asr-voicetype/stargazers) | [Release](https://github.com/ansewuLJ/linux-asr-voicetype/releases) | [Downloads](https://github.com/ansewuLJ/linux-asr-voicetype/releases) | [License](LICENSE)**
+
+[English](README.md) | **简体中文**
 
 这是一个面向 Linux 桌面的本地离线语音输入插件（可通过 Fcitx 或全局热键接入），默认本机推理，也支持把推理服务部署到局域网服务器。
 

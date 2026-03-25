@@ -1,6 +1,15 @@
 # linux-asr-voicetype
 
-[中文说明 (README_ZH.md)](README_ZH.md)
+Local offline speech input for Linux desktop.
+
+[![GitHub Stars](https://img.shields.io/github/stars/ansewuLJ/linux-asr-voicetype?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/stargazers)
+[![Latest Release](https://img.shields.io/github/v/release/ansewuLJ/linux-asr-voicetype?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/releases)
+[![Downloads](https://img.shields.io/github/downloads/ansewuLJ/linux-asr-voicetype/total?style=flat-square)](https://github.com/ansewuLJ/linux-asr-voicetype/releases)
+[![License](https://img.shields.io/github/license/ansewuLJ/linux-asr-voicetype?style=flat-square)](LICENSE)
+
+**[Stars](https://github.com/ansewuLJ/linux-asr-voicetype/stargazers) | [Release](https://github.com/ansewuLJ/linux-asr-voicetype/releases) | [Downloads](https://github.com/ansewuLJ/linux-asr-voicetype/releases) | [License](LICENSE)**
+
+**English** | [简体中文](README_ZH.md)
 
 A local offline speech input plugin for Linux desktop environments (integrates with Fcitx or global hotkeys). It supports local inference by default, and also supports deploying inference services to a LAN server.
 

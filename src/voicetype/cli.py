@@ -7,6 +7,7 @@ import httpx
 import typer
 import uvicorn
 
+from . import __version__
 from .audio import encode_pcm16_wav_base64
 from .asr_manager_ui import create_asr_manager_app
 from .config import AppConfig, default_runtime_config_path, load_runtime_config, save_runtime_config
@@ -18,6 +19,25 @@ from .server import run_server
 app = typer.Typer(help="voicetype command line")
 model_app = typer.Typer(help="Model management commands")
 app.add_typer(model_app, name="model")
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def _global_options(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show version and exit.",
+        is_eager=True,
+        callback=_version_callback,
+    ),
+) -> None:
+    _ = version
 
 
 def _config_from_options(
