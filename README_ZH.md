@@ -94,7 +94,7 @@ fcitx-remote -r
 ---
 
 ## ✦ 服务部署
-依赖 uv，先按 uv 官方文档安装：`https://docs.astral.sh/uv/getting-started/installation/`
+本项目依赖 [uv](https://docs.astral.sh/uv/getting-started/installation/)，请先安装。
 
 ### 单机部署
 

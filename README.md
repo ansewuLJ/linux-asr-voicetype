@@ -94,7 +94,7 @@ fcitx-remote -r
 ---
 
 ## ✦ Service Deployment
-This project depends on uv. Install uv first from official docs: `https://docs.astral.sh/uv/getting-started/installation/`
+This project depends on [uv](https://docs.astral.sh/uv/getting-started/installation/). Please install it first.
 
 ### Single-Machine Deployment
 
