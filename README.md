@@ -233,5 +233,4 @@ systemctl --user stop asr-manager-ui.service     # 停止服务
 
 ## ✦ 致谢
 
-- 本仓库 OpenVINO 处理链路参考了 `QwenASRMiniTool` 项目：
-  `https://github.com/dseditor/QwenASRMiniTool.git`
+- 本仓库 OpenVINO 处理链路参考了 [QwenASRMiniTool](https://github.com/dseditor/QwenASRMiniTool) 项目。
