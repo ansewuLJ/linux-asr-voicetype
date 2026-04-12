@@ -11,6 +11,8 @@
 
 <p align="center"><strong>English</strong> | <a href="README_ZH.md">简体中文</a></p>
 
+<p align="center"><a href="assets/demo.mp4">demo.mp4</a></p>
+
 A local offline speech input plugin for Linux desktop environments (integrates with Fcitx or global hotkeys). It supports local inference by default, and also supports deploying inference services to a LAN server.
 
 ## ✦ Features
